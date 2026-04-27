@@ -66,6 +66,7 @@ jobs:
         with:
           dockerfile: Dockerfile
           config: .hadolint.yaml
+          failure-threshold: error
 
   yaml:
     name: yamllint

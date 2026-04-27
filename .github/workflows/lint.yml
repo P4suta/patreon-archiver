@@ -62,8 +62,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: hadolint
-        run: docker run --rm -i hadolint/hadolint:v2.14.0 < Dockerfile
+      - uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          config: .hadolint.yaml
 
   yaml:
     name: yamllint

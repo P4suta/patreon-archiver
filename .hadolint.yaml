@@ -1,3 +1,10 @@
 trustedRegistries:
   - docker.io
   - ghcr.io
+
+ignored:
+  # DL3008: pin apt-get install versions — debian package versions roll
+  # forward inside a release; pinning would require pinning the slim base
+  # image too, which Renovate handles separately. Locking transitively
+  # via the base image digest is the right level for our use case.
+  - DL3008

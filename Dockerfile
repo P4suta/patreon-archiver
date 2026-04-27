@@ -14,6 +14,7 @@ FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv
 # ===== Stage 2: pinned just binary =====
 FROM debian:bookworm-slim AS just
 ARG JUST_VERSION
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
  && curl -fsSL "https://github.com/casey/just/releases/download/${JUST_VERSION}/just-${JUST_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
     | tar -xz -C /usr/local/bin just

@@ -52,7 +52,7 @@ class TestDeriveDefaults:
             "not-a-url",
         ],
     )
-    def test_unparseable_url_yields_empty(self, url: str) -> None:
+    def test_unparsable_url_yields_empty(self, url: str) -> None:
         assert derive_defaults(url) == {}
 
 

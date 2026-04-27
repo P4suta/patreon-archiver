@@ -1,0 +1,21 @@
+# One URL per line, optionally preceded by `# key: value` metadata lines.
+# Copy this file to urls/urls.txt (git-ignored) and run `just batch`.
+#
+# `just inventory` emits ready-to-paste blocks of this exact shape — the
+# usual workflow is to skim the markdown, find a video you want, and copy
+# the fenced code block contents (including the metadata comments) here.
+#
+# Recognized metadata keys (all optional — unknown keys are ignored):
+#   title    — used as %(title)s for the filename and embedded mp4 title
+#   uploader — folder name and embedded mp4 artist
+#   date     — YYYY-MM-DD; becomes %(upload_date)s
+#   post     — canonical Patreon post URL; embedded as the mp4 comment
+#              instead of the JWT iframe URL yt-dlp would otherwise use
+#
+# Example block (replace with a real Cloudstream URL from a Patreon post):
+#
+# # title: Sample post title
+# # uploader: Example Creator
+# # date: 2026-04-23
+# # post: https://www.patreon.com/posts/sample-123456
+# https://stream.example.com/20260423_sample_<token>/

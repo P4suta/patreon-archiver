@@ -1,0 +1,34 @@
+# Local secrets / state / output
+.env
+.env.*
+!.env.example
+
+# Cookies and any user-supplied auth material live under secrets/ but never
+# in git. .gitkeep is the only file we want to track.
+secrets/*
+!secrets/.gitkeep
+
+# Downloaded media is the whole point of the tool; never let it leak into
+# version control.
+downloads/*
+!downloads/.gitkeep
+
+# Anything under urls/ may carry signed Cloudflare Stream tokens or
+# identify the creator. Ignore the whole directory by default; whitelist
+# only the placeholder template and the .gitkeep marker.
+urls/*
+!urls/.gitkeep
+!urls/urls.txt.example
+
+# uv / Python caches
+.uv-cache/
+__pycache__/
+*.py[cod]
+.venv/
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

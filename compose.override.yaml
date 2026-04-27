@@ -1,0 +1,26 @@
+# Auto-merged overrides for local iteration. Bind-mounting scripts/ and
+# config/ means edits to download.sh / yt-dlp.conf take effect on the next
+# `docker compose run` without rebuilding the image.
+
+services:
+  archiver:
+    volumes:
+      - ${DOWNLOAD_DIR:-./downloads}:/downloads
+      - ./config:/work/config:ro
+      - ./urls:/work/urls:ro
+      - ./scripts:/work/scripts:ro
+
+  archiver-with-cookies:
+    volumes:
+      - ${DOWNLOAD_DIR:-./downloads}:/downloads
+      - ./config:/work/config:ro
+      - ./urls:/work/urls:ro
+      - ./scripts:/work/scripts:ro
+      - ${COOKIES_FILE:-./secrets/cookies.txt}:/secrets/cookies.txt:ro
+
+  shell:
+    volumes:
+      - ${DOWNLOAD_DIR:-./downloads}:/downloads
+      - ./config:/work/config:ro
+      - ./urls:/work/urls:ro
+      - ./scripts:/work/scripts:ro

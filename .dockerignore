@@ -18,17 +18,16 @@ secrets/
 downloads/
 urls/urls.txt
 
-# Compose / orchestration / docs not needed at runtime
-compose.yaml
-compose.override.yaml
-compose.*.yaml
-justfile
+# Docs / dev configs not needed at runtime. justfile IS now baked in
+# (it's the in-container dispatcher for `pa`), so it's intentionally
+# absent from this ignore list.
 .pre-commit-config.yaml
 .editorconfig
 .yamllint.yaml
 .hadolint.yaml
 README.md
 LICENSE
+pa
 
 # Python caches
 __pycache__/

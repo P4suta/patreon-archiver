@@ -1,16 +1,15 @@
 # patreon-archiver
 
-支援している Patreon クリエイターが独自ドメイン経由で配信している動画を、
-個人のオフライン視聴用にローカル保存するための Docker ベース環境。
+Patreon クリエイターが独自ドメイン経由(Cloudflare Stream 前段)で配信している
+動画を、個人のオフライン視聴用にローカル保存するための Docker ベース環境。
 
-ホスト側に必要なのは **Docker** と **just** だけ。yt-dlp / ffmpeg / Python /
-uv はすべてコンテナ内に閉じ込めてある。
+ホスト側に必要なのは **Docker のみ**。yt-dlp / ffmpeg / Python / uv / just は
+すべてコンテナに同梱されてて、`./pa <subcmd>` でアクセスする。
 
 ## 必要なもの
 
-- Docker Engine 24+ と `docker compose` plugin
-- [`just`](https://github.com/casey/just)
-- (任意) [`jj`](https://docs.jj-vcs.dev/) — このリポは colocated 構成
+- Docker Engine 24+
+- 以上
 
 ## 初回セットアップ
 
@@ -18,45 +17,54 @@ uv はすべてコンテナ内に閉じ込めてある。
 git clone <url> patreon-archiver
 cd patreon-archiver
 
-# .env をローカルに作る (git-ignored)
+# (任意) .env で保存先などを上書き
 cp .env.example .env
-# WSL2 で host UID/GID を合わせる場合のみ:
-sed -i "s/^UID=.*/UID=$(id -u)/; s/^GID=.*/GID=$(id -g)/" .env
 
-# uv.lock を Docker 経由で生成 (host を汚さない)
-just relock
-
-# image build
-just build
+# image build (初回のみ; pa が自動で build する場合もそれで OK)
+./pa build
 
 # 環境スモーク (ネット不要)
-just smoke
+./pa smoke
 ```
 
-`just smoke` が通れば環境は OK。
+`./pa smoke` が通れば環境は OK。
 
 ## 使い方
+
+### `./pa` リファレンス
+
+```bash
+./pa                 # available recipes 一覧
+./pa sync <mhtml>    # MHTML 差分 sync(後述)
+./pa download <URL>  # 単発 download
+./pa batch           # urls/urls.txt をまるっと
+./pa inventory <mhtml> > posts.md   # MHTML → markdown 一覧
+./pa resolve <URL>   # 配信 URL → CF Stream iframe URL を表示
+./pa shell           # 中で対話 bash
+./pa version         # bundled yt-dlp version
+./pa build / upgrade # image (再)build
+```
 
 ### 単発 download
 
 ```bash
-just download "https://stream.example.com/<日付>_<id>_<token>/"
+./pa download "https://stream.example.com/<日付>_<slug>_<token>/"
 ```
 
-トークン付き URL なら Cookie 不要のはず。401/403 が返ったら下を参照。
+トークン付き URL なら Cookie 不要のはず。401/403 が返ったら下の Cookie 経路へ。
 
 ### Cookie 経由
 
 1. Firefox/Chrome の cookies.txt 拡張で配信ページの Cookie を Netscape 形式で export
-2. `secrets/cookies.txt` に保存 (このディレクトリは git-ignored、`chmod 600` 推奨)
-3. `just download-cookies "<URL>"`
+2. `secrets/cookies.txt` に保存(`secrets/` は git-ignored、`chmod 600` 推奨)
+3. `./pa download "<URL>"` — `pa` が cookies.txt の存在を自動検知して mount + `YTDLP_COOKIES` を立てる
 
 ### バッチ
 
-`urls/urls.txt.example` を参考に `urls/urls.txt` を作る (git-ignored)。
+`urls/urls.txt.example` を参考に `urls/urls.txt` を作る(`urls/` は git-ignored)。
 
 ```bash
-just batch
+./pa batch
 ```
 
 `yt-dlp.conf` の `--download-archive` 設定により、すでに落とした URL は
@@ -70,10 +78,10 @@ Patreon の "posts" ページをブラウザで全ポスト読み込んだ状態
 が出る。タイトル / 日付 / 動画長 / Patreon post URL の見出しの下に、
 `# title: / # uploader: / # date: / # post:` のメタデータコメント付きの
 **コピペ用 URL ブロック**(fenced code block)が並ぶ。欲しい動画の
-ブロックの中身を丸ごと `urls/urls.txt` にコピーして `just batch`。
+ブロックの中身を丸ごと `urls/urls.txt` にコピーして `./pa batch`。
 
 ```bash
-just inventory ~/Downloads/foo.mhtml > urls/posts.md
+./pa inventory ~/Downloads/foo.mhtml > urls/posts.md
 ```
 
 メタデータコメントは `download.sh` が読み取って `--parse-metadata` で
@@ -84,18 +92,18 @@ yt-dlp に注入される。Cloudflare Stream extractor は uploader/title/日�
 非動画 post(selfie / wallpaper / お知らせ)は stream URL なしで出るので
 すぐ識別できる。
 
-### 差分 sync(`just sync`)
+### 差分 sync(`pa sync`)
 
 新しい post だけを拾いたい場合:
 
 ```bash
-just sync ~/Downloads/foo.mhtml
+./pa sync ~/Downloads/foo.mhtml
 ```
 
 これは `inventory.py --seen-file urls/seen_posts.txt --minimal` の出力を
-`urls/urls.txt` に書き、URL が 1 本でもあれば `just batch` を起動、終了後に
+`urls/urls.txt` に書き、URL が 1 本でもあれば batch を起動、終了後に
 ハンドルした post の Patreon canonical URL を `urls/seen_posts.txt` に
-append する(`sort -u` で dedup)。MHTML を週次で上書き保存 → `just sync`
+append する(`sort -u` で dedup)。MHTML を週次で上書き保存 → `./pa sync`
 を回すだけで新規 post が自動で降ってくる。
 
 #### Gap detection(`urls/coverage.txt`)
@@ -126,14 +134,11 @@ at YYYY-MM-DD (first sync).` と言いながら自動 init するので、手動
 セットアップする必要は無い。
 
 初回はまず `seen_posts.txt` を **現状の MHTML** で seed しておくと
-「新規分のみ」運用が始められる(`coverage.txt` は次回 `just sync` 実行時に
+「新規分のみ」運用が始められる(`coverage.txt` は次回 `./pa sync` 実行時に
 自動 init される):
 
 ```bash
-docker compose run --rm -T \
-  -v "$(realpath ~/Downloads/foo.mhtml)":/in.mhtml:ro \
-  --entrypoint python3 archiver \
-  /work/scripts/inventory.py /in.mhtml --minimal \
+./pa inventory ~/Downloads/foo.mhtml --minimal \
   | grep '^# post: ' | sed 's/^# post: //' | sort -u \
   > urls/seen_posts.txt
 ```
@@ -143,7 +148,7 @@ docker compose run --rm -T \
 
 ## ダウンロード中の見え方
 
-`docker compose run` が TTY を割り当てるので、yt-dlp の **進捗バーは
+`./pa` は stdout/stdin が TTY のときだけ `-it` を立てるので、yt-dlp の **進捗バーは
 ターミナルにそのまま in-place で更新される**。`--progress-delta 5` で
 更新頻度を 5 秒に絞ってあるので、TTY でも piped でも騒がしくならない。
 
@@ -186,7 +191,7 @@ CDN 視点で「scraper っぽい」シグナル(同一 IP からの大量並列
 ある一回だけ動作を変えたい場合は CLI 側で上書き可能:
 
 ```bash
-just download "<URL>" --limit-rate 2M --concurrent-fragments 1
+./pa download "<URL>" --limit-rate 2M --concurrent-fragments 1
 ```
 
 (yt-dlp は同じ flag が複数あれば後勝ち)
@@ -199,34 +204,43 @@ just download "<URL>" --limit-rate 2M --concurrent-fragments 1
 # 例: WSL2 にマウントした SSD
 echo "DOWNLOAD_DIR=/mnt/wsl/ssd/patreon" >> .env
 mkdir -p /mnt/wsl/ssd/patreon
-just download "<URL>"
+./pa download "<URL>"
+```
+
+env だけで一回限り上書きしたい場合:
+
+```bash
+DOWNLOAD_DIR=/mnt/somewhere ./pa sync ~/Downloads/foo.mhtml
 ```
 
 ## yt-dlp の月次更新
 
 1. `gh release list -R yt-dlp/yt-dlp -L 3` で最新版を確認
 2. `pyproject.toml` の `yt-dlp[default]==<X.Y.Z>` を書き換え
-3. `just relock`
-4. `just upgrade` (`--no-cache --pull` で rebuild)
-5. `just smoke` を確認 → `jj describe -m "chore(deps): bump yt-dlp to <X.Y.Z>"`
+3. `./pa upgrade` (`--no-cache --pull` で rebuild、新 lock を含む)
+4. `./pa smoke` を確認
 
 ## ディレクトリ構成
 
 ```
 patreon-archiver/
-├── Dockerfile              # python:3.13-slim + ffmpeg + yt-dlp via uv
-├── compose.yaml            # default / cookies / dev の 3 profile
-├── compose.override.yaml   # scripts/ と config/ を bind mount
-├── justfile                # `just <recipe>` で全操作
+├── Dockerfile              # python:3.13-slim + ffmpeg + yt-dlp + just via uv
+├── pa                      # 唯一の host wrapper (docker のみ依存)
+├── justfile                # in-container dispatcher (image にも同梱)
 ├── pyproject.toml          # yt-dlp の version pin
 ├── uv.lock                 # 再現性ロック
 ├── config/yt-dlp.conf      # 共通フラグ
 ├── scripts/
-│   ├── download.sh         # entrypoint (Cookie の有無で分岐)
+│   ├── download.sh         # yt-dlp wrapper(メタ注入 + 1 URL 1 invocation)
+│   ├── inventory.py        # MHTML → markdown / minimal blocks
+│   ├── resolve.sh          # publisher URL → CF Stream iframe URL
 │   └── smoke.sh            # offline 検証
 ├── secrets/                # cookies.txt の置き場 (git-ignored)
 ├── downloads/              # default 保存先 (git-ignored)
-└── urls/urls.txt           # バッチ実行用 URL 一覧 (git-ignored)
+└── urls/                   # batch URL + sync state (git-ignored)
+    ├── urls.txt            # `pa batch` / `pa sync` の入力
+    ├── seen_posts.txt      # sync 既処理 post URL の状態
+    └── coverage.txt        # gap detection の anchor 日
 ```
 
 ## 設計メモ

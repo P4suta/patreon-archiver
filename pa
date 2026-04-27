@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+# patreon-archiver — host wrapper. Only host dependency: docker.
+#
+# Builds the image on first invocation if it isn't present locally. After
+# that, every call is just `docker run image <recipe> [args...]` — the
+# in-container `just` dispatches to the right workload.
+#
+# Usage examples:
+#   ./pa sync ~/Downloads/foo.mhtml
+#   ./pa download "https://stream.example.com/<date>_<slug>_<token>/"
+#   ./pa inventory ~/Downloads/foo.mhtml > posts.md
+#   ./pa batch
+#   ./pa smoke
+#   ./pa shell
+#   ./pa                            # lists available recipes
+#   ./pa build                      # explicit (re)build
+#   ./pa upgrade                    # rebuild with --no-cache --pull
+#
+# Tunables (env or .env):
+#   DOWNLOAD_DIR               default ./downloads
+#   STATE_DIR                  default ./urls
+#   COOKIES_FILE               default ./secrets/cookies.txt
+#   PA_IMAGE                   default patreon-archiver:local
+#   YTDLP_BATCH_SLEEP_MIN/MAX  default 5/15
+#   TZ                         default Asia/Tokyo
+set -euo pipefail
+
+HERE=$(cd "$(dirname "$(readlink -f "$0")")" && pwd)
+cd "$HERE"
+
+if [[ -f .env ]]; then
+    # Parse .env line by line so readonly bash vars (UID, GID, BASH*,
+    # etc.) that legacy compose-era .env files often carry don't abort
+    # the script, and so values already set in the calling environment
+    # (e.g. `DOWNLOAD_DIR=./downloads ./pa sync ...`) win over the file.
+    while IFS='=' read -r key value; do
+        [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
+        case "$key" in UID|GID|EUID|PPID|BASH*|SHELL) continue ;; esac
+        [[ -n "${!key+x}" ]] && continue
+        value="${value%\"}"; value="${value#\"}"
+        export "$key=$value" 2>/dev/null || true
+    done < .env
+fi
+
+PA_IMAGE="${PA_IMAGE:-patreon-archiver:local}"
+DOWNLOAD_DIR="${DOWNLOAD_DIR:-$HERE/downloads}"
+STATE_DIR="${STATE_DIR:-$HERE/urls}"
+COOKIES_FILE="${COOKIES_FILE:-$HERE/secrets/cookies.txt}"
+
+ensure_image() {
+    if docker image inspect "$PA_IMAGE" >/dev/null 2>&1; then
+        return
+    fi
+    printf '[pa] image %s not found locally — building from ./Dockerfile...\n' "$PA_IMAGE" >&2
+    docker build -t "$PA_IMAGE" .
+}
+
+# build / upgrade are host operations (must happen before `docker run`).
+case "${1:-}" in
+    build)
+        exec docker build -t "$PA_IMAGE" .
+        ;;
+    upgrade)
+        exec docker build --no-cache --pull -t "$PA_IMAGE" .
+        ;;
+esac
+
+ensure_image
+mkdir -p "$DOWNLOAD_DIR" "$STATE_DIR"
+
+mounts=(
+    -v "$(realpath "$DOWNLOAD_DIR"):/downloads"
+    -v "$(realpath "$STATE_DIR"):/state"
+    -e "TZ=${TZ:-Asia/Tokyo}"
+    -e "YTDLP_BATCH_SLEEP_MIN=${YTDLP_BATCH_SLEEP_MIN:-5}"
+    -e "YTDLP_BATCH_SLEEP_MAX=${YTDLP_BATCH_SLEEP_MAX:-15}"
+    -u "$(id -u):$(id -g)"
+)
+if [[ -r "$COOKIES_FILE" ]]; then
+    mounts+=(
+        -v "$(realpath "$COOKIES_FILE"):/secrets/cookies.txt:ro"
+        -e "YTDLP_COOKIES=/secrets/cookies.txt"
+    )
+fi
+
+tty="-i"
+if [[ -t 0 && -t 1 ]]; then
+    tty="-it"
+fi
+
+# `sync` and `inventory` take a host MHTML path as the next positional
+# arg — bind-mount it at /in/mhtml and rewrite the arg before exec.
+case "${1:-}" in
+    sync|inventory)
+        recipe="$1"
+        shift
+        if [[ $# -gt 0 && -e "$1" ]]; then
+            mhtml=$(realpath "$1")
+            shift
+            exec docker run --rm "$tty" \
+                -v "$mhtml:/in/mhtml:ro" \
+                "${mounts[@]}" \
+                "$PA_IMAGE" "$recipe" /in/mhtml "$@"
+        fi
+        # No file path — let just print its own usage error.
+        exec docker run --rm "$tty" "${mounts[@]}" "$PA_IMAGE" "$recipe" "$@"
+        ;;
+    *)
+        exec docker run --rm "$tty" "${mounts[@]}" "$PA_IMAGE" "$@"
+        ;;
+esac

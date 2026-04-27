@@ -1,0 +1,42 @@
+# lefthook: native git hooks. Run `lefthook install` once after cloning to
+# wire up .git/hooks/. The commands below assume the dev tooling is on
+# $PATH locally (mise / brew / cargo / pipx / uv tool install all work):
+#
+#     uv sync --group dev   # ruff, pyright, pytest, hypothesis
+#     mise use -g typos@latest lefthook@latest shellcheck@latest
+#
+# CI runs the same checks via .github/workflows/lint.yml.
+
+pre-commit:
+  parallel: true
+  commands:
+    ruff-check:
+      glob: "*.{py,pyi}"
+      run: ruff check {staged_files}
+      stage_fixed: true
+
+    ruff-format:
+      glob: "*.{py,pyi}"
+      run: ruff format --check {staged_files}
+
+    pyright:
+      glob: "*.{py,pyi}"
+      # Pyright wants the whole project for cross-file analysis; pass the
+      # config-controlled set instead of staged files only.
+      run: pyright
+
+    typos:
+      run: typos {staged_files}
+
+    shellcheck:
+      glob: "*.sh"
+      run: shellcheck -x {staged_files}
+
+    shellcheck-pa:
+      glob: "pa"
+      run: shellcheck -x pa
+
+pre-push:
+  commands:
+    pytest:
+      run: pytest -q

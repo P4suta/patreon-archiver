@@ -1,0 +1,26 @@
+# typos: project-wide allowlist + path excludes.
+
+[default]
+# Locale-agnostic; we have JA in docstrings and code comments.
+locale = "en"
+
+[default.extend-words]
+# Project / CLI nouns that look misspelled but are intentional.
+"ot" = "ot"
+
+[default.extend-identifiers]
+# Symbols (kept for identifier-shaped tokens that are valid).
+
+[files]
+extend-exclude = [
+    "uv.lock",
+    "*.lock",
+    "*.mhtml",
+    "downloads/",
+    "secrets/",
+    "urls/seen_posts.txt",
+    "urls/coverage.txt",
+    "urls/urls.txt",
+    ".env",
+    "tests/fixtures/",
+]

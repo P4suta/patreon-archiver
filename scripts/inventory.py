@@ -21,9 +21,7 @@ from pathlib import Path
 
 from bs4 import BeautifulSoup, Tag
 
-VIDEO_LEN_RE = re.compile(
-    r"(?:Video length|動画の長さ|🔴)\s*(\d{1,3}:\d{2}(?::\d{2})?)"
-)
+VIDEO_LEN_RE = re.compile(r"(?:Video length|動画の長さ|🔴)\s*(\d{1,3}:\d{2}(?::\d{2})?)")
 
 # Stream URL shape we know how to mine date and host from. Mirrors the
 # regex in resolve.sh / download.sh. The publisher embeds the upload date
@@ -41,7 +39,8 @@ def read_html_from_mhtml(path: Path) -> str:
     for part in msg.walk():
         if part.get_content_type() == "text/html":
             payload = part.get_payload(decode=True)
-            return payload.decode("utf-8", errors="replace")
+            if isinstance(payload, bytes):
+                return payload.decode("utf-8", errors="replace")
     raise SystemExit(f"no text/html part found in {path}")
 
 
@@ -55,14 +54,20 @@ def find_first(card: Tag, tag: str) -> Tag | None:
     return card.find(attrs={"data-tag": tag})
 
 
+def _href_of(anchor: Tag) -> str | None:
+    """Return the ``href`` attribute as a plain string (BS4 returns a union type)."""
+    raw = anchor.get("href")
+    return raw if isinstance(raw, str) else None
+
+
 def post_url(card: Tag) -> str | None:
-    candidates = [find_first(card, "post-title"), card]
+    candidates: list[Tag | None] = [find_first(card, "post-title"), card]
     for node in candidates:
         if node is None:
             continue
         for a in node.find_all("a", href=True):
-            href = a["href"]
-            if "/posts/" not in href:
+            href = _href_of(a)
+            if href is None or "/posts/" not in href:
                 continue
             return href if href.startswith("http") else f"https://www.patreon.com{href}"
     return None
@@ -80,7 +85,9 @@ def stream_urls(card: Tag) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []
     for a in card.find_all("a", href=True):
-        href = a["href"]
+        href = _href_of(a)
+        if href is None:
+            continue
         if STREAM_URL_RE.match(href) and href not in seen:
             seen.add(href)
             out.append(href)
@@ -176,15 +183,15 @@ def main() -> int:
         type=Path,
         default=None,
         help="Path to a file of canonical Patreon post URLs (one per line, "
-             "'#' comments OK). Posts whose URL appears here are skipped — "
-             "lets `just sync` produce a diff instead of the full inventory.",
+        "'#' comments OK). Posts whose URL appears here are skipped — "
+        "lets `just sync` produce a diff instead of the full inventory.",
     )
     parser.add_argument(
         "--minimal",
         action="store_true",
         help="Emit only the metadata + URL lines that download.sh consumes "
-             "(no markdown headers, no code fences). Suitable for piping "
-             "straight into urls/urls.txt.",
+        "(no markdown headers, no code fences). Suitable for piping "
+        "straight into urls/urls.txt.",
     )
     args = parser.parse_args()
 
@@ -200,7 +207,7 @@ def main() -> int:
     page_title = text_of(title_node) if title_node else "Patreon snapshot"
     uploader = page_uploader(soup)
 
-    seen = load_seen(args.seen_file) if args.seen_file else set()
+    seen: set[str] = load_seen(args.seen_file) if args.seen_file else set()
     selected = [c for c in cards if (post_url(c) or "") not in seen]
 
     # Surface the MHTML's video-post date range on stderr. The sync recipe

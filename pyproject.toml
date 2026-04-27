@@ -1,12 +1,137 @@
 [project]
 name = "patreon-archiver"
 version = "0.0.0"
-description = "Docker-based local archiver for paid Patreon Cloudstream content"
+description = "Docker-based local archiver for Patreon creators fronting their videos via Cloudflare Stream"
 requires-python = ">=3.13"
 dependencies = [
     "yt-dlp[default]==2026.3.17",
     "beautifulsoup4>=4.13",
 ]
 
+[dependency-groups]
+dev = [
+    "ruff>=0.8.0",
+    "pyright>=1.1.400",
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "pytest-xdist>=3.6",
+    "hypothesis>=6.115",
+]
+
 [tool.uv]
 package = false
+
+# ---------- ruff ----------
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["scripts", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # pyflakes
+    "I",     # isort
+    "N",     # pep8-naming
+    "UP",    # pyupgrade
+    "B",     # flake8-bugbear
+    "A",     # flake8-builtins
+    "C4",    # flake8-comprehensions
+    "DTZ",   # flake8-datetimez
+    "PTH",   # flake8-use-pathlib
+    "SIM",   # flake8-simplify
+    "RET",   # flake8-return
+    "ARG",   # flake8-unused-arguments
+    "ANN",   # flake8-annotations
+    "S",     # flake8-bandit (security)
+    "TC",    # flake8-type-checking
+    "TID",   # flake8-tidy-imports
+    "PL",    # pylint
+    "RUF",   # ruff-specific
+    "PERF",  # perflint
+    "FURB",  # refurb
+]
+ignore = [
+    "ANN401",  # any-type — sometimes acceptable for **kwargs / passthrough
+    "PLR0913", # too-many-arguments — judgment call
+    "PLR2004", # magic-value — pragmatic for dates, sentinels
+    "S404",    # subprocess module import — required, deliberately
+    "S603",    # subprocess call — fixed-argv calls are safe
+    "S607",    # subprocess partial path — we trust container PATH
+    "COM812",  # missing-trailing-comma — handled by formatter
+    "ISC001",  # implicit-string-concat — formatter-managed
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "S101",    # assert OK in tests
+    "PLR2004", # magic values fine in tests
+    "ANN",     # type annotations optional in tests
+    "ARG",     # unused fixture args common
+    "TC001",   # tests: TYPE_CHECKING import gymnastics not worth it
+    "TC002",
+    "TC003",
+    "PLC0415", # tests: local imports keep heavy modules out of collect time
+    "PLW0108", # lambda fmt nit not worth fighting in tests
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+# ---------- pyright ----------
+
+[tool.pyright]
+include = ["scripts"]
+extraPaths = ["scripts"]
+exclude = ["tests", ".venv", "downloads", "secrets", "urls"]
+pythonVersion = "3.13"
+typeCheckingMode = "strict"
+reportMissingImports = "error"
+reportMissingTypeStubs = "warning"
+strictParameterNoneValue = true
+
+# ---------- pytest ----------
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+pythonpath = ["scripts"]
+testpaths = ["tests"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=scripts",
+    "--cov-branch",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+    "--cov-fail-under=100",
+]
+filterwarnings = [
+    "error",
+]
+
+# ---------- coverage ----------
+
+[tool.coverage.run]
+source = ["scripts"]
+branch = true
+parallel = false
+omit = [
+    "scripts/smoke.sh",
+]
+
+[tool.coverage.report]
+exclude_also = [
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@overload",
+]
+show_missing = true
+skip_covered = false
+fail_under = 100
+precision = 1

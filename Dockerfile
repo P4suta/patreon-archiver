@@ -4,7 +4,7 @@
 #   1. uv      — borrow the pinned Astral uv binary
 #   2. runtime — slim Python + ffmpeg + yt-dlp installed via uv
 
-ARG UV_VERSION=0.11.7
+ARG UV_VERSION=0.11.8
 ARG JUST_VERSION=1.50.0
 ARG PYTHON_IMAGE=python:3.13-slim-bookworm
 

@@ -257,6 +257,39 @@ patreon-archiver/
   サムネは `--embed-thumbnail` で mp4 内に取り込んで完結させる。
 - DRM はかかっていない前提。Widevine 等が出てきた場合このツールは扱わない。
 
+## Development
+
+`pa` is enough to *use* the tool. To *contribute*, install the dev tooling
+locally — easiest path is mise:
+
+```bash
+mise use -g uv@latest typos@latest lefthook@latest shellcheck@latest hadolint@latest
+uv sync --group dev
+lefthook install   # wires .git/hooks
+```
+
+Then iterate:
+
+```bash
+uv run ruff check         # lint
+uv run ruff format        # format
+uv run pyright            # strict type-check
+uv run pytest             # tests + 100% branch coverage gate
+typos                     # spell check
+```
+
+CI runs the same set on every PR via `.github/workflows/lint.yml`. Coverage
+is gated at **100% branch** with **no `pragma: no cover` / `pragma: no
+branch` suppressions allowed** — defensive branches must be exercised by
+real tests (or the defensive code refactored away).
+
+Dependency updates are automated via Renovate (`renovate.json`):
+- Python dev tooling: minor/patch auto-merged
+- GitHub Actions: digest+minor/patch auto-merged
+- yt-dlp + Dockerfile base: PR opened, manual review (extractor /
+  base-image churn warrants a human eye)
+- Weekly lockfile maintenance every Monday morning JST
+
 ## License
 
 MIT — see [`LICENSE`](LICENSE). The license covers **this software**;

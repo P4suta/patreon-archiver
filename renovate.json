@@ -1,0 +1,78 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":pinAllExceptPeerDependencies",
+    ":automergeMinor",
+    ":automergeDigest",
+    ":dependencyDashboard",
+    "schedule:earlyMondays",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "timezone": "Asia/Tokyo",
+  "labels": ["dependencies"],
+  "rangeStrategy": "bump",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"]
+  },
+  "packageRules": [
+    {
+      "matchManagers": ["pep621"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "groupName": "python deps (non-major)"
+    },
+    {
+      "matchDepTypes": ["dev"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true,
+      "groupName": "python dev tooling"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["patch", "minor", "digest"],
+      "automerge": true,
+      "groupName": "github actions"
+    },
+    {
+      "matchManagers": ["dockerfile"],
+      "matchUpdateTypes": ["patch", "minor", "digest"],
+      "automerge": false,
+      "groupName": "dockerfile base + ARG pins"
+    },
+    {
+      "matchPackageNames": ["yt-dlp"],
+      "automerge": false,
+      "labels": ["dependencies", "yt-dlp"],
+      "description": "yt-dlp moves fast and breaks extractors; review every bump."
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Track JUST_VERSION ARG in the Dockerfile against casey/just GitHub releases.",
+      "managerFilePatterns": ["/(^|/)Dockerfile$/"],
+      "matchStrings": [
+        "ARG JUST_VERSION=(?<currentValue>[0-9.]+)"
+      ],
+      "depNameTemplate": "casey/just",
+      "datasourceTemplate": "github-releases"
+    },
+    {
+      "customType": "regex",
+      "description": "Track UV_VERSION ARG in the Dockerfile against the astral-sh/uv image tags.",
+      "managerFilePatterns": ["/(^|/)Dockerfile$/"],
+      "matchStrings": [
+        "ARG UV_VERSION=(?<currentValue>[0-9.]+)"
+      ],
+      "depNameTemplate": "ghcr.io/astral-sh/uv",
+      "datasourceTemplate": "docker"
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "labels": ["security"],
+    "automerge": true
+  },
+  "osvVulnerabilityAlerts": true
+}

@@ -257,7 +257,51 @@ patreon-archiver/
   サムネは `--embed-thumbnail` で mp4 内に取り込んで完結させる。
 - DRM はかかっていない前提。Widevine 等が出てきた場合このツールは扱わない。
 
-## ライセンス
+## License
 
-MIT (`LICENSE`)。配信される動画コンテンツ自体は当然このライセンスの対象外で、
-個人視聴目的に限定して利用する。
+MIT — see [`LICENSE`](LICENSE). The license covers **this software**;
+it does not grant any rights over content downloaded with it. The
+copyright of any video, image, or other media retrieved through this
+tool remains with its original creator and is governed by their terms.
+
+## Disclaimer
+
+This tool is for **personal, offline archiving** of content the user
+already has paid, authorized access to (e.g. videos posted by a
+Patreon creator the user actively supports as a paying subscriber).
+It does **not** implement DRM bypass — Widevine, FairPlay, PlayReady
+and similar protected streams are explicitly out of scope and will
+not be handled. It does not facilitate piracy, large-scale scraping,
+or redistribution of paid content.
+
+By using this software you acknowledge that:
+
+- **Compliance with applicable copyright law is your responsibility.**
+  This includes (non-exhaustively) the U.S. DMCA / 17 U.S.C. § 1201,
+  the EU Copyright Directive (2019/790), and Japan's 著作権法 — in
+  particular the personal-use copying provisions (e.g. 第30条) and
+  their limitations.
+- **Compliance with the Terms of Service of every platform you access
+  is your responsibility.** Patreon, Cloudflare Stream, and any
+  publisher domain in front of them all have their own ToS that may
+  restrict local archiving even by paying subscribers. Verify before
+  you use.
+- **You will not redistribute** archived content, in whole or in part,
+  publicly or to third parties. Personal offline viewing and public
+  republication are categorically different acts.
+- **The authors disclaim all liability** for misuse of this software,
+  to the extent permitted by law. This software is provided "as is",
+  without warranty of any kind, per the MIT license.
+
+このツールは、利用者本人が **正当に有料 subscribe している** Patreon
+クリエイター(支援対象本人)の動画を **個人視聴用にローカル保存**する
+目的で書かれている。DRM 回避は実装していない(Widevine 等の保護ストリームは
+対応外)し、海賊行為・有料コンテンツの再配布・大規模スクレイピングを
+補助するものでもない。
+
+各国の著作権法(米 DMCA、EU Copyright Directive、日本の著作権法 — 特に
+私的使用のための複製規定 第30条と例外)および各 platform の ToS(Patreon、
+Cloudflare Stream、配信ドメイン側)への遵守はすべて **利用者の自己責任**。
+取得したコンテンツの **再配布は明示的に禁止**(個人視聴と公開再頒布は
+別物)。本ツール作者は誤用に対する一切の責任を負わない(MIT 規定の通り、
+法律の許す範囲で)。

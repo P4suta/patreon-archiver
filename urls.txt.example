@@ -1,7 +1,9 @@
 # One URL per line, optionally preceded by `# key: value` metadata lines.
-# Copy this file to urls/urls.txt (git-ignored) and run `just batch`.
+# Copy this file to <your data dir>/urls.txt and run `pa batch` from
+# inside that directory. The data dir is whatever your $PWD is when you
+# run pa — pa bind-mounts CWD as /data inside the container.
 #
-# `just inventory` emits ready-to-paste blocks of this exact shape — the
+# `pa inventory` emits ready-to-paste blocks of this exact shape — the
 # usual workflow is to skim the markdown, find a video you want, and copy
 # the fenced code block contents (including the metadata comments) here.
 #

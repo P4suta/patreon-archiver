@@ -2,7 +2,11 @@
 #
 # Multi-stage build:
 #   1. uv      — borrow the pinned Astral uv binary
-#   2. runtime — slim Python + ffmpeg + yt-dlp installed via uv
+#   2. just    — borrow the pinned casey/just binary
+#   3. runtime — slim Python + ffmpeg + yt-dlp installed via uv (default leaf
+#                for production; pa / pa.win / build.yml all use --target runtime)
+#   4. dev     — runtime + ruff/pyright/pytest/lefthook/typos/hadolint/shellcheck
+#                for .devcontainer/ use; built only with --target dev
 
 ARG UV_VERSION=0.11.8
 ARG JUST_VERSION=1.50.0
@@ -46,8 +50,8 @@ COPY --from=just /usr/local/bin/just /usr/local/bin/just
 
 RUN groupadd --system --gid 10001 app \
  && useradd --system --uid 10001 --gid app --create-home --shell /bin/bash app \
- && mkdir -p /downloads /secrets /work /opt/venv \
- && chown -R app:app /downloads /secrets /work /opt/venv
+ && mkdir -p /data /secrets /work /opt/venv /var/lib/pa/staging \
+ && chown -R app:app /data /secrets /work /opt/venv /var/lib/pa
 
 WORKDIR /work
 
@@ -73,3 +77,66 @@ USER app
 # default recipe lists everything available (so `pa` with no args = help).
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/just"]
 CMD []
+
+# ===== Stage 4: dev (devcontainer target) =====
+# Inherits the runtime toolchain (uv, just, ffmpeg, tini, python) and adds
+# the host-side dev kit. The dev venv is **not** baked into the image —
+# devcontainer.json runs `uv sync --group dev` post-create against the
+# bind-mounted workspace, which puts .venv under host-owned files so the
+# UID-remapped dev user owns it without a chown dance.
+#
+# Build only this target for devcontainer use:
+#   docker build --target dev -t patreon-archiver:dev .
+FROM runtime AS dev
+
+ARG LEFTHOOK_VERSION=2.1.6
+ARG TYPOS_VERSION=1.45.2
+ARG HADOLINT_VERSION=2.14.0
+
+USER root
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# Host-side dev OS deps. git for vcs, shellcheck for the pre-commit hook,
+# sudo so the remoteUser can install ad-hoc packages, less/vim-tiny for
+# basic terminal ergonomics inside the container, libatomic1 for the
+# prebuilt node that pyright-python downloads on first invocation.
+# hadolint ignore=DL3008
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git \
+        less \
+        libatomic1 \
+        shellcheck \
+        sudo \
+        vim-tiny \
+    && rm -rf /var/lib/apt/lists/*
+
+# Pinned static binaries for tools lefthook/typos/hadolint expect on PATH.
+# Versions are tracked by Renovate via custom regex managers in renovate.json.
+RUN curl -fsSL "https://github.com/evilmartians/lefthook/releases/download/v${LEFTHOOK_VERSION}/lefthook_${LEFTHOOK_VERSION}_Linux_x86_64.gz" \
+        | gunzip > /usr/local/bin/lefthook \
+ && chmod +x /usr/local/bin/lefthook \
+ && curl -fsSL "https://github.com/crate-ci/typos/releases/download/v${TYPOS_VERSION}/typos-v${TYPOS_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
+        | tar -xz -C /usr/local/bin ./typos \
+ && curl -fsSL -o /usr/local/bin/hadolint \
+        "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-Linux-x86_64" \
+ && chmod +x /usr/local/bin/hadolint
+
+# Passwordless sudo for the dev user — devcontainer convenience only.
+RUN echo 'app ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/app \
+ && chmod 0440 /etc/sudoers.d/app
+
+# Override runtime defaults: re-enable dev group on `uv sync` and point
+# UV_PROJECT_ENVIRONMENT at the workspace mount so the venv inherits host
+# UID ownership. Prepend the workspace .venv to PATH so post-sync tools
+# (ruff/pyright/pytest/yt-dlp) win over /opt/venv's runtime-only copy.
+ENV UV_NO_DEV=0 \
+    UV_PROJECT_ENVIRONMENT=/workspaces/patreon-archiver/.venv \
+    PATH="/workspaces/patreon-archiver/.venv/bin:${PATH}"
+
+# Devcontainer keeps the container alive itself; the runtime ENTRYPOINT
+# (tini -- just) would refuse to exec `sleep infinity` cleanly.
+ENTRYPOINT []
+CMD ["sleep", "infinity"]
+
+USER app
+WORKDIR /workspaces/patreon-archiver

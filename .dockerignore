@@ -1,4 +1,12 @@
 # Anything we never want baked into the image.
+#
+# data/ is the user-facing tree (videos, state, MHTML, cookies, .retest).
+# It's bind-mounted at runtime and must stay out of the build context —
+# otherwise `docker build` would tar it up alongside source and pay for
+# every mp4 the user has ever archived.
+
+# User data (mounted at runtime; never built into the image)
+data/
 
 # VCS / editor
 .git/
@@ -7,27 +15,26 @@
 .gitattributes
 .idea/
 .vscode/
+.devcontainer/
 *.swp
 .DS_Store
 
-# Local secrets / runtime state
+# Local env overrides
 .env
 .env.*
-!.env.example
-secrets/
-downloads/
-urls/urls.txt
 
 # Docs / dev configs not needed at runtime. justfile IS now baked in
-# (it's the in-container dispatcher for `pa`), so it's intentionally
-# absent from this ignore list.
+# (it's the in-container dispatcher), so it's intentionally absent here.
 .editorconfig
 .yamllint.yaml
 .hadolint.yaml
 README.md
 LICENSE
-pa
+pa.cmd
+compose.yaml
+urls.txt.example
 tests/
+logs/
 lefthook.yml
 typos.toml
 renovate.json

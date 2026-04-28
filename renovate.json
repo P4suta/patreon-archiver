@@ -68,6 +68,39 @@
       ],
       "depNameTemplate": "ghcr.io/astral-sh/uv",
       "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "Track LEFTHOOK_VERSION ARG (devcontainer dev stage) against evilmartians/lefthook GitHub releases.",
+      "managerFilePatterns": ["/(^|/)Dockerfile$/"],
+      "matchStrings": [
+        "ARG LEFTHOOK_VERSION=(?<currentValue>[0-9.]+)"
+      ],
+      "depNameTemplate": "evilmartians/lefthook",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.+)$"
+    },
+    {
+      "customType": "regex",
+      "description": "Track TYPOS_VERSION ARG (devcontainer dev stage) against crate-ci/typos GitHub releases.",
+      "managerFilePatterns": ["/(^|/)Dockerfile$/"],
+      "matchStrings": [
+        "ARG TYPOS_VERSION=(?<currentValue>[0-9.]+)"
+      ],
+      "depNameTemplate": "crate-ci/typos",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.+)$"
+    },
+    {
+      "customType": "regex",
+      "description": "Track HADOLINT_VERSION ARG (devcontainer dev stage) against hadolint/hadolint GitHub releases.",
+      "managerFilePatterns": ["/(^|/)Dockerfile$/"],
+      "matchStrings": [
+        "ARG HADOLINT_VERSION=(?<currentValue>[0-9.]+)"
+      ],
+      "depNameTemplate": "hadolint/hadolint",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.+)$"
     }
   ],
   "vulnerabilityAlerts": {

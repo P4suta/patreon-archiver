@@ -1,0 +1,44 @@
+# Docker Compose entrypoint for patreon-archiver.
+#
+# Run model: 保存先 = repo ルート。compose.yaml と同じディレクトリの
+# ``./data/`` だけを ``/data`` に bind mount する。これで repo の
+# source (Dockerfile / scripts/ / config/ など) と user データ
+# (動画 / MHTML / 状態ファイル / cookies / .retest) が同居しても
+# **コンテナからは user データだけ見える** 形になる。
+#
+# Examples (Windows host):
+#   pa.cmd               - just --list (recipes 一覧)
+#   pa.cmd sync          - data/mhtml/ の最新 *.mhtml を sync
+#   pa.cmd batch         - data/urls.txt をまるごと
+#   pa.cmd download URL  - 単発 download → data/<uploader>/...
+#   pa.cmd build         - image を build (初回 + Dockerfile 変更時)
+#
+# Tunables (set in shell or .env beside compose.yaml):
+#   TZ                       default Asia/Tokyo
+#   YTDLP_BATCH_SLEEP_MIN/MAX default 5/15
+#
+# cookies は /data/cookies.txt (= host の `./data/cookies.txt`) にあれば
+# 自動で拾われる。不在なら download.py が黙って Cookie なし経路に落ちる。
+
+services:
+  pa:
+    image: patreon-archiver:local
+    build:
+      context: .
+      target: runtime
+    volumes:
+      - ./data:/data
+    working_dir: /data
+    environment:
+      TZ: ${TZ:-Asia/Tokyo}
+      YTDLP_BATCH_SLEEP_MIN: ${YTDLP_BATCH_SLEEP_MIN:-5}
+      YTDLP_BATCH_SLEEP_MAX: ${YTDLP_BATCH_SLEEP_MAX:-15}
+      YTDLP_COOKIES: /data/cookies.txt
+      # working_dir is /data so `pa shell` lands the user in the data tree,
+      # but `just` (the image ENTRYPOINT) needs to know where the recipes
+      # file lives — the bundled one is at /work/justfile.
+      JUST_JUSTFILE: /work/justfile
+    # `pull_policy: missing` をあえて指定しない: image が無ければ
+    # `docker compose run` が自動で build に落ちる。`pa.cmd build`
+    # を明示的に叩いて欲しい場合は build: 行をコメントアウトすれば
+    # `image not found` エラーで止まる。

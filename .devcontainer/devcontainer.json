@@ -1,0 +1,58 @@
+// Devcontainer config — opens the repo inside the `dev` target of the
+// repo-root Dockerfile. Mirrors the runtime image (uv/just/ffmpeg/yt-dlp)
+// and adds dev tooling (ruff/pyright/pytest/lefthook/typos/hadolint/
+// shellcheck). The dev venv lives under .venv in the workspace so the
+// UID-remapped `app` user owns it.
+//
+// Spec: https://containers.dev/implementors/json_reference/
+{
+    "name": "patreon-archiver",
+    "build": {
+        "context": "..",
+        "dockerfile": "../Dockerfile",
+        "target": "dev"
+    },
+    "workspaceFolder": "/workspaces/patreon-archiver",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/patreon-archiver,type=bind,consistency=cached",
+    "remoteUser": "app",
+    "updateRemoteUserUID": true,
+    "overrideCommand": true,
+    "containerEnv": {
+        "TZ": "Asia/Tokyo"
+    },
+    // Sync deps + wire git hooks once the bind mount is in place. `|| true`
+    // keeps the container usable even if uv hits a transient network error
+    // — re-run `uv sync --locked --group dev` from the integrated terminal.
+    "postCreateCommand": "uv sync --locked --group dev && lefthook install",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "charliermarsh.ruff",
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "tamasfe.even-better-toml",
+                "exiasr.hadolint",
+                "timonwong.shellcheck",
+                "redhat.vscode-yaml",
+                "github.vscode-github-actions",
+                "skellock.just"
+            ],
+            "settings": {
+                "python.defaultInterpreterPath": "/workspaces/patreon-archiver/.venv/bin/python",
+                "python.testing.pytestEnabled": true,
+                "python.testing.unittestEnabled": false,
+                "python.testing.pytestArgs": ["tests"],
+                "[python]": {
+                    "editor.defaultFormatter": "charliermarsh.ruff",
+                    "editor.formatOnSave": true,
+                    "editor.codeActionsOnSave": {
+                        "source.fixAll.ruff": "explicit",
+                        "source.organizeImports.ruff": "explicit"
+                    }
+                },
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "files.eol": "\n"
+            }
+        }
+    }
+}

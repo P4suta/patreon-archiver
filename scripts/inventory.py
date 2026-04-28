@@ -14,12 +14,15 @@ Pipe to a file::
 from __future__ import annotations
 
 import argparse
+import datetime
 import email
 import re
 import sys
 from pathlib import Path
 
 from bs4 import BeautifulSoup, Tag
+
+from _mhtml import latest_mhtml
 
 VIDEO_LEN_RE = re.compile(r"(?:Video length|動画の長さ|🔴)\s*(\d{1,3}:\d{2}(?::\d{2})?)")
 
@@ -177,7 +180,12 @@ def load_seen(path: Path) -> set[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mhtml", type=Path, help="path to .mhtml snapshot")
+    parser.add_argument(
+        "mhtml",
+        nargs="?",
+        default=None,
+        help="path to .mhtml snapshot; if omitted, the newest *.mhtml under /data/mhtml/ is used",
+    )
     parser.add_argument(
         "--seen-file",
         type=Path,
@@ -194,13 +202,14 @@ def main() -> int:
         "straight into urls/urls.txt.",
     )
     args = parser.parse_args()
+    mhtml: Path = Path(args.mhtml) if args.mhtml else latest_mhtml()
 
-    html = read_html_from_mhtml(args.mhtml)
+    html = read_html_from_mhtml(mhtml)
     soup = BeautifulSoup(html, "html.parser")
     cards = soup.find_all(attrs={"data-tag": "post-card"})
 
     if not cards:
-        print(f"no post-card elements found in {args.mhtml}", file=sys.stderr)
+        print(f"no post-card elements found in {mhtml}", file=sys.stderr)
         return 1
 
     title_node = soup.find("title")
@@ -221,7 +230,16 @@ def main() -> int:
             m = STREAM_URL_RE.match(stream)
             if m:
                 d = m.group("date")
-                all_video_dates.append(f"{d[0:4]}-{d[4:6]}-{d[6:8]}")
+                iso = f"{d[0:4]}-{d[4:6]}-{d[6:8]}"
+                # The regex only verifies *shape* (\d{8}), not validity.
+                # `99999999` or `20260230` (Feb 30) would slip through
+                # and break sync's string-compare gap detection. Drop
+                # anything that doesn't parse as a real ISO date.
+                try:
+                    datetime.date.fromisoformat(iso)
+                except ValueError:
+                    continue
+                all_video_dates.append(iso)
     if all_video_dates:
         print(
             f"[inventory] mhtml_date_range: {min(all_video_dates)} .. "
@@ -244,10 +262,10 @@ def main() -> int:
     if args.seen_file:
         print(
             f"{len(selected)} new post(s) ({skipped} already in "
-            f"`{args.seen_file.name}`) from `{args.mhtml.name}`."
+            f"`{args.seen_file.name}`) from `{mhtml.name}`."
         )
     else:
-        print(f"{len(cards)} posts captured from `{args.mhtml.name}`.")
+        print(f"{len(cards)} posts captured from `{mhtml.name}`.")
     print()
     print("---")
     print()

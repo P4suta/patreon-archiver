@@ -5,21 +5,24 @@
 # private /var/lib/pa/staging area are writable by the runtime user.
 set -euo pipefail
 
-echo "[1/5] yt-dlp version"
+echo "[1/6] yt-dlp version"
 yt-dlp --version
 
-echo "[2/5] ffmpeg present"
+echo "[2/6] ffmpeg present"
 ffmpeg -version | head -n1
 
-echo "[3/5] yt-dlp config parses"
+echo "[3/6] yt-dlp polite config parses"
 yt-dlp --config-location /work/config/yt-dlp.conf --help >/dev/null
 
-echo "[4/5] /data is writable"
+echo "[4/6] yt-dlp fast config parses"
+yt-dlp --config-location /work/config/yt-dlp-fast.conf --help >/dev/null
+
+echo "[5/6] /data is writable"
 probe="/data/.smoke.$$"
 touch "${probe}"
 rm -f "${probe}"
 
-echo "[5/5] /var/lib/pa/staging is writable"
+echo "[6/6] /var/lib/pa/staging is writable"
 probe="/var/lib/pa/staging/.smoke.$$"
 touch "${probe}"
 rm -f "${probe}"

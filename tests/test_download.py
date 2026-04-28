@@ -20,6 +20,8 @@ from hypothesis import strategies as st
 import download
 import publish
 from download import (
+    CONFIG_PATH_ENV,
+    DEFAULT_CONFIG_PATH,
     META_KEYS,
     UrlBlock,
     _escape_colons,
@@ -29,6 +31,7 @@ from download import (
     emit_meta_flags,
     main,
     parse_batch,
+    resolve_config_path,
     run_batch,
     run_one,
 )
@@ -163,6 +166,29 @@ class TestBuildYtDlpArgs:
     def test_basic_args_include_config(self, bare_staging: publish.StagingRun) -> None:
         args = build_yt_dlp_args(UrlBlock(url="https://x"), [], None, bare_staging)
         assert args[0] == "--config-location"
+
+    def test_config_path_defaults_to_polite_preset(
+        self, bare_staging: publish.StagingRun, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv(CONFIG_PATH_ENV, raising=False)
+        args = build_yt_dlp_args(UrlBlock(url="https://x"), [], None, bare_staging)
+        assert args[1] == str(DEFAULT_CONFIG_PATH)
+
+    def test_config_path_override_via_env(
+        self, bare_staging: publish.StagingRun, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv(CONFIG_PATH_ENV, "/work/config/yt-dlp-fast.conf")
+        args = build_yt_dlp_args(UrlBlock(url="https://x"), [], None, bare_staging)
+        assert args[1] == "/work/config/yt-dlp-fast.conf"
+
+    def test_empty_env_falls_back_to_default(
+        self, bare_staging: publish.StagingRun, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Empty string must NOT be treated as "use empty path" — yt-dlp would
+        # then read from the cwd's yt-dlp.conf or fail; an unset-equivalent
+        # value should fall through to the bundled default.
+        monkeypatch.setenv(CONFIG_PATH_ENV, "")
+        assert resolve_config_path() == DEFAULT_CONFIG_PATH
 
     def test_paths_pin_yt_dlp_to_staging(self, bare_staging: publish.StagingRun) -> None:
         args = build_yt_dlp_args(UrlBlock(url="https://x"), [], None, bare_staging)

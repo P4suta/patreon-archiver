@@ -72,6 +72,35 @@ download URL *EXTRA:
 resolve URL:
     python3 /work/scripts/resolve.py "{{URL}}"
 
+# ---------- fast preset ----------
+#
+# Same code paths as `download` / `batch` / `sync`, but point yt-dlp at
+# config/yt-dlp-fast.conf and shrink the inter-video sleep window. CF
+# Stream is fine with browser-aggressive concurrency for a single client;
+# see config/yt-dlp-fast.conf for the rationale on each value.
+#
+# Profile is selected via PA_YTDLP_CONFIG; sub-process scripts inherit the
+# env so this works for both single-URL and batch / sync flows without
+# changing download.py / sync.py argv.
+
+# Single-URL download with the fast preset.
+fast URL *EXTRA:
+    PA_YTDLP_CONFIG=/work/config/yt-dlp-fast.conf \
+        YTDLP_BATCH_SLEEP_MIN=0 YTDLP_BATCH_SLEEP_MAX=2 \
+        python3 /work/scripts/download.py "{{URL}}" {{EXTRA}}
+
+# Batch download with the fast preset.
+fast-batch *EXTRA:
+    PA_YTDLP_CONFIG=/work/config/yt-dlp-fast.conf \
+        YTDLP_BATCH_SLEEP_MIN=0 YTDLP_BATCH_SLEEP_MAX=2 \
+        python3 /work/scripts/download.py --batch-file /data/urls.txt {{EXTRA}}
+
+# Differential sync with the fast preset.
+fast-sync MHTML="":
+    PA_YTDLP_CONFIG=/work/config/yt-dlp-fast.conf \
+        YTDLP_BATCH_SLEEP_MIN=0 YTDLP_BATCH_SLEEP_MAX=2 \
+        python3 /work/scripts/sync.py "{{MHTML}}"
+
 # Offline self-test (no network).
 smoke:
     /work/scripts/smoke.sh

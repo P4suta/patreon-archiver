@@ -47,7 +47,11 @@ if TYPE_CHECKING:
 
 RETEST_ROOT_NAME: str = ".retest"
 
-CONFIG_PATH = Path("/work/config/yt-dlp.conf")
+DEFAULT_CONFIG_PATH = Path("/work/config/yt-dlp.conf")
+# Override via PA_YTDLP_CONFIG so the `pa fast` recipe family can swap in
+# config/yt-dlp-fast.conf without touching argv. Resolved at call time so
+# tests can flip the env var with monkeypatch.setenv per case.
+CONFIG_PATH_ENV: str = "PA_YTDLP_CONFIG"
 # yt-dlp's --print-to-file template emits one TSV row per `after_move`
 # event so the wrapper can locate freshly produced files. Tabs are safer
 # than spaces because mp4 paths can legitimately contain spaces.
@@ -136,6 +140,17 @@ def emit_meta_flags(key: str, raw_value: str) -> list[str]:
     return []
 
 
+def resolve_config_path() -> Path:
+    """Return the active yt-dlp config path.
+
+    Defaults to :data:`DEFAULT_CONFIG_PATH`; callers can switch profiles by
+    exporting :data:`CONFIG_PATH_ENV` (the ``pa fast`` recipe family does
+    exactly this to point at ``config/yt-dlp-fast.conf``).
+    """
+    override = os.environ.get(CONFIG_PATH_ENV)
+    return Path(override) if override else DEFAULT_CONFIG_PATH
+
+
 def parse_batch(path: Path) -> Iterator[UrlBlock]:
     """Yield one ``UrlBlock`` per URL line, attaching any preceding metadata comments.
 
@@ -175,7 +190,7 @@ def build_yt_dlp_args(
     """
     args: list[str] = [
         "--config-location",
-        str(CONFIG_PATH),
+        str(resolve_config_path()),
         "--paths",
         f"home:{staging.home}",
         "--download-archive",

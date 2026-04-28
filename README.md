@@ -103,6 +103,9 @@ pa simulate <URL> [...]    # 1 URL を yt-dlp --simulate で検証(state 触ら�
 pa retest <URL> [...]      # 強制再 download → /data/.retest/<ts>/(state 触らず)
 pa download <URL>          # 単発 download
 pa batch                   # urls.txt をまるっと
+pa fast <URL>              # 単発 download(fast preset)
+pa fast-batch              # urls.txt をまるっと(fast preset)
+pa fast-sync [mhtml]       # MHTML 差分 sync(fast preset)
 pa inventory [mhtml]       # MHTML → markdown 一覧 (引数なしで data/mhtml/<latest>)
 pa resolve <URL>           # 配信 URL → CF Stream iframe URL を表示
 pa shell                   # 中で対話 bash (cwd = /data = 保存先)
@@ -315,6 +318,32 @@ CDN 視点で「scraper っぽい」シグナル(同一 IP からの大量並列
 
 帯域を意図的に絞りたい(あるいは更に並列を上げたい)場合は `config/yt-dlp.conf`
 を編集。
+
+### Fast preset(`pa fast` / `pa fast-batch` / `pa fast-sync`)
+
+配信前段は Cloudflare Stream で、CDN 自身は ABR player が 1 client から
+prefetch してくる程度の並列・連打は当たり前に捌く設計になっている。
+「礼儀」というより「自分を scraper っぽく見せない用心」だけで残ってる
+default 値を、ブラウザの ABR player 相当まで緩めたのが fast preset。
+
+| 設定 | polite 既定 | fast preset |
+|---|---|---|
+| `--concurrent-fragments` | `4` | `8` |
+| `--sleep-requests` | `1s` | `0` |
+| `YTDLP_BATCH_SLEEP_MIN` / `MAX` | `5` / `15` 秒 | `0` / `2` 秒 |
+| `--limit-rate` | (なし) | (なし) |
+| retry / backoff | 同左 | 同左(429 を踏んだ瞬間 backoff するセーフティは残す) |
+
+```powershell
+.\pa.cmd fast       "https://stream.example.com/<日付>_<slug>_<token>/"
+.\pa.cmd fast-batch
+.\pa.cmd fast-sync
+```
+
+実装は `config/yt-dlp-fast.conf` に分けてあり、recipe 側で `PA_YTDLP_CONFIG`
+env と `YTDLP_BATCH_SLEEP_MIN/MAX` を上書きして同じ `download.py` / `sync.py`
+を叩く。`download` / `batch` / `sync` 系の動作・transactional publish 保証・
+archive.txt 連携は全く同じ — 速度プロファイルだけ差し替わる。
 
 ## yt-dlp の月次更新
 

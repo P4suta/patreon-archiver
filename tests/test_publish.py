@@ -128,13 +128,13 @@ class TestAtomicPublish:
         src.write_bytes(b"x")
         dst = tmp_path / "out" / "final.bin"
         # Allow the copy to create the tmp, then explode before replace.
-        original_copy2 = publish.shutil.copy2
+        original_copyfile = publish.shutil.copyfile
 
         def boom_copy(s: object, t: object) -> None:
-            original_copy2(s, t)
+            original_copyfile(s, t)
             raise OSError("disk full")
 
-        monkeypatch.setattr(publish.shutil, "copy2", boom_copy)
+        monkeypatch.setattr(publish.shutil, "copyfile", boom_copy)
         with pytest.raises(OSError, match="disk full"):
             atomic_publish(src, dst)
         # Final file must NOT exist; tmp must NOT linger.

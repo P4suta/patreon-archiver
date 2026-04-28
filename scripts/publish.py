@@ -121,11 +121,17 @@ def atomic_publish(src: Path, dst: Path) -> None:
 
     The hidden ``.pa-publish.<token>.tmp`` name keeps in-flight bytes out
     of a default ``ls`` and avoids colliding with concurrent publishes.
+
+    Uses ``shutil.copyfile`` rather than ``copy2``: yt-dlp's
+    ``--no-mtime`` already strips upload timestamps, and the ``copystat``
+    half of ``copy2`` (utime + chmod) is rejected with ``EPERM`` when
+    ``/data`` is a Windows-NTFS bind mount whose DrvFs metadata mode does
+    not authorise the container user to set those attributes.
     """
     dst.parent.mkdir(parents=True, exist_ok=True)
     tmp = dst.parent / f".pa-publish.{secrets.token_hex(8)}.tmp"
     try:
-        shutil.copy2(src, tmp)
+        shutil.copyfile(src, tmp)
         tmp.replace(dst)
     except OSError:
         tmp.unlink(missing_ok=True)

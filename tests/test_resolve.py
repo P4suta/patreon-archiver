@@ -117,6 +117,35 @@ class TestResolve:
         with pytest.raises(ResolveError, match="fetch failed"):
             resolve_url("https://stream.example.com/x")
 
+    def test_urlerror_subclass_is_caught(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Real-world failures arrive as `urllib.error.HTTPError` (4xx/5xx)
+        # which subclasses `URLError`. Constructing a real HTTPError on
+        # Python 3.14 trips a tempfile finalizer warning we don't care
+        # about; using a minimal URLError subclass exercises the same
+        # catch path without that side-effect.
+        from urllib.error import URLError
+
+        class FakeHTTPError(URLError):
+            pass
+
+        def boom(_url: str) -> str:
+            raise FakeHTTPError("HTTP 403 Forbidden")
+
+        monkeypatch.setattr(resolve, "fetch", boom)
+        with pytest.raises(ResolveError, match="fetch failed"):
+            resolve_url("https://stream.example.com/x")
+
+    def test_socket_timeout_is_caught(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # On Python 3.10+, socket.timeout aliases TimeoutError, so the
+        # except (URLError, TimeoutError) clause covers it. Pin the
+        # behaviour so a future tightening of the except clause notices.
+        def boom(_url: str) -> str:
+            raise TimeoutError("read timed out")
+
+        monkeypatch.setattr(resolve, "fetch", boom)
+        with pytest.raises(ResolveError, match="fetch failed"):
+            resolve_url("https://stream.example.com/x")
+
 
 class TestMain:
     def test_main_prints_resolved(

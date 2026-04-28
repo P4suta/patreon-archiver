@@ -215,6 +215,82 @@ class TestMainAllVideoDates:
         assert "mhtml_date_range" not in capsys.readouterr().err
 
 
+class TestMainStrictDateValidation:
+    """`mhtml_date_range` line must never carry a malformed ISO date.
+
+    The regex `\\d{8}` only checks shape — `99999999` or `20260230` (Feb 30)
+    slip through. Once such a string lands in `mhtml_date_range`, sync's
+    `parse_date_range` returns it verbatim and `evaluate_anchor` does
+    string-comparison gap detection on garbage — at that point coverage
+    can advance to a date that no real post will ever match, and gap
+    warnings start firing for the wrong reason.
+    """
+
+    def test_invalid_calendar_date_in_url_is_dropped(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        import sys
+
+        import inventory
+
+        # Stream URL whose 8-digit prefix is structurally valid but represents
+        # Feb 30. inventory must skip it from the date_range aggregate while
+        # still emitting it in the body (the URL itself is fine to download).
+        bogus_url = "https://stream.example.com/20260230_slug_tok123/"
+        good_url = "https://stream.example.com/20260423_slug_tok123/"
+        monkeypatch.setattr(inventory, "stream_urls", lambda _card: [bogus_url, good_url])
+        # Use any valid sample MHTML — we only care about the date harvest.
+        from conftest import FakePost, write_mhtml
+
+        sample = write_mhtml(
+            tmp_path / "x.mhtml",
+            [
+                FakePost(
+                    title="Anything",
+                    post_path="/posts/x",
+                    date_yyyymmdd="20260423",
+                    slug="slug",
+                ),
+            ],
+        )
+        monkeypatch.setattr(sys, "argv", ["inventory.py", str(sample), "--minimal"])
+        assert inventory.main() == 0
+        err = capsys.readouterr().err
+        # Only the valid date appears in the date range, and the count
+        # reflects only the valid URLs counted.
+        assert "2026-02-30" not in err  # bogus dropped
+        assert "2026-04-23" in err  # good kept
+        # The aggregate must mention exactly one valid video post (the good
+        # URL across all cards). At minimum, it must not be 0.
+        assert "0 video posts" not in err
+
+    def test_all_invalid_dates_yields_no_date_range_line(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        import sys
+
+        import inventory
+
+        bogus_only = "https://stream.example.com/99999999_slug_tok/"
+        monkeypatch.setattr(inventory, "stream_urls", lambda _card: [bogus_only])
+        from conftest import FakePost, write_mhtml
+
+        sample = write_mhtml(
+            tmp_path / "x.mhtml",
+            [FakePost(title="x", post_path="/posts/x", date_yyyymmdd=None, slug=None)],
+        )
+        monkeypatch.setattr(sys, "argv", ["inventory.py", str(sample), "--minimal"])
+        assert inventory.main() == 0
+        # All dates were bogus → no `mhtml_date_range` line at all.
+        assert "mhtml_date_range" not in capsys.readouterr().err
+
+
 class TestPageUploader:
     @pytest.mark.parametrize(
         ("title", "expected"),
@@ -370,6 +446,46 @@ class TestMain:
         monkeypatch.setattr("sys.argv", ["inventory.py", str(mhtml)])
         assert main() == 0
         assert "mhtml_date_range" not in capsys.readouterr().err
+
+
+class TestMainAutoDetectsMhtml:
+    def test_picks_newest_when_no_arg_given(
+        self,
+        sample_mhtml: Path,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import _mhtml
+
+        mhtml_dir = tmp_path / "mhtml-input"
+        mhtml_dir.mkdir()
+        # Move sample_mhtml into the auto-detect dir.
+        target = mhtml_dir / "snap.mhtml"
+        target.write_bytes(sample_mhtml.read_bytes())
+        monkeypatch.setattr(_mhtml, "MHTML_DIR", mhtml_dir)
+        monkeypatch.setattr("sys.argv", ["inventory.py"])
+        assert main() == 0
+        assert "Newest video post" in capsys.readouterr().out
+
+    def test_empty_arg_falls_through_to_auto_detect(
+        self,
+        sample_mhtml: Path,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import _mhtml
+
+        mhtml_dir = tmp_path / "mhtml-input"
+        mhtml_dir.mkdir()
+        target = mhtml_dir / "snap.mhtml"
+        target.write_bytes(sample_mhtml.read_bytes())
+        monkeypatch.setattr(_mhtml, "MHTML_DIR", mhtml_dir)
+        # justfile {{MHTML}} expansion injects an empty positional when unset.
+        monkeypatch.setattr("sys.argv", ["inventory.py", ""])
+        assert main() == 0
+        assert "Newest video post" in capsys.readouterr().out
 
 
 class TestRegexes:

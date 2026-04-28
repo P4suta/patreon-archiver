@@ -3,7 +3,7 @@
 The MHTML builder generates a tiny in-memory snapshot that ``inventory.py``
 can parse, with configurable post counts / metadata. All fixtures avoid
 touching the network or any host paths the real wrapper relies on (``/in``,
-``/state``, ``/downloads`` are simulated via ``tmp_path``).
+``/data`` are simulated via ``tmp_path``).
 """
 
 from __future__ import annotations
@@ -131,21 +131,39 @@ def empty_mhtml(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def state_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Redirect sync.py's STATE_DIR / SCRIPTS_DIR onto a tmp path.
+def data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Redirect sync.py's and publish.py's DATA_DIR onto a tmp path.
 
-    Tests can write into and read out of ``state_dir`` directly to assert
-    on seen_posts.txt / coverage.txt / urls.txt behaviour.
+    Tests can write into and read out of ``data_dir`` directly to assert
+    on seen_posts.txt / coverage.txt / urls.txt / archive.txt behaviour.
+    Also redirects the auto-detect MHTML directory so tests don't reach
+    into ``/data/mhtml/`` on the host.
     """
+    import _mhtml
+    import publish
     import sync
 
-    sd = tmp_path / "state"
+    sd = tmp_path / "data"
     sd.mkdir()
-    monkeypatch.setattr(sync, "STATE_DIR", sd)
+    monkeypatch.setattr(sync, "DATA_DIR", sd)
     monkeypatch.setattr(sync, "SEEN_FILE", sd / "seen_posts.txt")
     monkeypatch.setattr(sync, "COVERAGE_FILE", sd / "coverage.txt")
     monkeypatch.setattr(sync, "URLS_FILE", sd / "urls.txt")
+    monkeypatch.setattr(publish, "DATA_DIR", sd)
+    monkeypatch.setattr(publish, "ARCHIVE_FILE", sd / "archive.txt")
+    monkeypatch.setattr(_mhtml, "MHTML_DIR", sd / "mhtml")
     return sd
+
+
+@pytest.fixture
+def staging_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Redirect publish.py's STAGING_ROOT off of /var/lib/pa/staging."""
+    import publish
+
+    sr = tmp_path / "staging"
+    sr.mkdir()
+    monkeypatch.setattr(publish, "STAGING_ROOT", sr)
+    return sr
 
 
 @pytest.fixture

@@ -29,6 +29,9 @@ coverage.xml
 .DS_Store
 Thumbs.db
 
+# Claude Code harness state (per-session lock + scratch)
+.claude/
+
 # Local dev session logs / state backups (the runtime keeps state
 # inside data/; this dir is purely for ad-hoc captures while iterating
 # on the wrapper).

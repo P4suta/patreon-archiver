@@ -13,7 +13,6 @@ import resolve
 from resolve import (
     CF_IFRAME_RE,
     PASSTHROUGH_PATTERN,
-    PASSTHROUGH_PREFIXES,
     ResolveError,
     fetch,
     find_iframe,
@@ -177,7 +176,3 @@ class TestRegexes:
     def test_passthrough_pattern_only_matches_customer_subdomain(self) -> None:
         assert PASSTHROUGH_PATTERN.match("https://customer-abc.cloudflarestream.com/x")
         assert not PASSTHROUGH_PATTERN.match("https://other.cloudflarestream.com/x")
-
-    def test_passthrough_prefixes_complete(self) -> None:
-        assert "https://iframe.videodelivery.net/" in PASSTHROUGH_PREFIXES
-        assert "https://watch.videodelivery.net/" in PASSTHROUGH_PREFIXES

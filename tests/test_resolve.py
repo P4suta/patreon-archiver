@@ -179,5 +179,7 @@ class TestRegexes:
         assert not PASSTHROUGH_PATTERN.match("https://other.cloudflarestream.com/x")
 
     def test_passthrough_prefixes_complete(self) -> None:
-        assert "https://iframe.videodelivery.net/" in PASSTHROUGH_PREFIXES
-        assert "https://watch.videodelivery.net/" in PASSTHROUGH_PREFIXES
+        assert PASSTHROUGH_PREFIXES == (
+            "https://iframe.videodelivery.net/",
+            "https://watch.videodelivery.net/",
+        )

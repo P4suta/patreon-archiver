@@ -52,10 +52,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: shellcheck pa + smoke
+      - name: shellcheck smoke
         run: |
           docker run --rm -v "$PWD":/mnt -w /mnt koalaman/shellcheck:v0.11.0 \
-            -x pa scripts/smoke.sh
+            -x scripts/smoke.sh
 
   dockerfile:
     name: hadolint

@@ -54,7 +54,7 @@ def text_of(node: Tag | None) -> str:
 
 
 def find_first(card: Tag, tag: str) -> Tag | None:
-    return card.find(attrs={"data-tag": tag})
+    return card.select_one(f'[data-tag="{tag}"]')
 
 
 def _href_of(anchor: Tag) -> str | None:
@@ -206,7 +206,7 @@ def main() -> int:
 
     html = read_html_from_mhtml(mhtml)
     soup = BeautifulSoup(html, "html.parser")
-    cards = soup.find_all(attrs={"data-tag": "post-card"})
+    cards = soup.select('[data-tag="post-card"]')
 
     if not cards:
         print(f"no post-card elements found in {mhtml}", file=sys.stderr)

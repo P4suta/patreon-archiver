@@ -1,5 +1,10 @@
 # patreon-archiver
 
+> [!IMPORTANT]
+> **For personal, offline archiving only** — of content you already have paid, authorized access to. Not affiliated with Patreon or Cloudflare. Does **not** bypass DRM, and must not be used for piracy or redistribution. You alone are responsible for complying with applicable copyright law and every platform's Terms of Service. Provided "as is", without warranty — **use at your own risk**. See the [Disclaimer](#disclaimer).
+>
+> **個人のオフライン保存専用** — 利用者が正当に有料アクセス権を持つコンテンツに限る。Patreon / Cloudflare とは無関係。DRM 回避は行わず、海賊行為・再配布に使用してはならない。著作権法および各 platform の利用規約の遵守は利用者の責任であり、本ソフトウェアは無保証・**自己責任**で提供される。詳細は[免責事項](#disclaimer)を参照。
+
 Patreon クリエイターが独自ドメイン経由(Cloudflare Stream 前段)で配信している
 動画を、個人のオフライン視聴用にローカル保存するための Docker ベース環境。
 

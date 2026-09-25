@@ -4,7 +4,7 @@ version = "0.0.0"
 description = "Docker-based local archiver for Patreon creators fronting their videos via Cloudflare Stream"
 requires-python = ">=3.13"
 dependencies = [
-    "yt-dlp[default]==2026.3.17",
+    "yt-dlp[default]==2026.7.4",
     "beautifulsoup4>=4.13",
 ]
 

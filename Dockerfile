@@ -9,7 +9,7 @@
 #                for .devcontainer/ use; built only with --target dev
 
 ARG UV_VERSION=0.11.8
-ARG JUST_VERSION=1.50.0
+ARG JUST_VERSION=1.59.0
 ARG PYTHON_IMAGE=python:3.13-slim-bookworm
 
 # ===== Stage 1: pinned uv binary =====
@@ -89,9 +89,9 @@ CMD []
 #   docker build --target dev -t patreon-archiver:dev .
 FROM runtime AS dev
 
-ARG LEFTHOOK_VERSION=2.1.6
-ARG TYPOS_VERSION=1.45.2
-ARG HADOLINT_VERSION=2.14.0
+ARG LEFTHOOK_VERSION=2.2.2
+ARG TYPOS_VERSION=1.51.1
+ARG HADOLINT_VERSION=2.15.1
 
 USER root
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]

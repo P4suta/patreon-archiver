@@ -19,9 +19,9 @@ jobs:
     name: ruff + pyright + pytest (cov 100%)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
         with:
           enable-cache: true
 
@@ -42,7 +42,7 @@ jobs:
 
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: coverage-xml
           path: coverage.xml
@@ -51,7 +51,7 @@ jobs:
     name: shellcheck
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: shellcheck smoke
         run: |
           docker run --rm -v "$PWD":/mnt -w /mnt koalaman/shellcheck:v0.11.0 \
@@ -61,8 +61,8 @@ jobs:
     name: hadolint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: hadolint/hadolint-action@v3.1.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: hadolint/hadolint-action@54c9adbab1582c2ef04b2016b760714a4bfde3cf # v3.1.0
         with:
           dockerfile: Dockerfile
           config: .hadolint.yaml
@@ -72,7 +72,7 @@ jobs:
     name: yamllint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: yamllint
         run: |
           docker run --rm -v "$PWD":/data cytopia/yamllint:1 \
@@ -82,14 +82,14 @@ jobs:
     name: typos
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: crate-ci/typos@v1.31.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: crate-ci/typos@718c4ff697435edabd4f1c52c3775521adbb33a3 # v1.31.0
 
   gitleaks:
     name: gitleaks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
       - run: |

@@ -1,0 +1,33 @@
+python:
+  - 'scripts/**/*.py'
+  - 'tests/**'
+  - 'pyproject.toml'
+  - 'uv.lock'
+  - '.python-version'
+  - 'Dockerfile'
+  - '.github/workflows/lint.yml'
+  - '.github/filters/ci.yml'
+
+image:
+  - 'Dockerfile'
+  - '.dockerignore'
+  - '.python-version'
+  - 'pyproject.toml'
+  - 'uv.lock'
+  - 'justfile'
+  - 'compose.yaml'
+  - 'config/**'
+  - 'scripts/**'
+  - 'tests/test_integration.py'
+  - 'tests/conftest.py'
+  - '.github/workflows/lint.yml'
+  - '.github/filters/ci.yml'
+
+security:
+  - 'scripts/**/*.py'
+  - 'tests/**/*.py'
+  - 'pyproject.toml'
+  - 'uv.lock'
+  - '.github/workflows/**'
+  - '.github/actions/**'
+  - '.github/filters/ci.yml'

@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.9
+# syntax=docker/dockerfile:1.28@sha256:bb22d9815c728170f72750f4e5b0d672e06176142e1d602c7e66c050100b7e5b
 #
 # Multi-stage build:
 #   1. uv      — borrow the pinned Astral uv binary
@@ -8,15 +8,15 @@
 #   4. dev     — runtime + ruff/pyright/pytest/lefthook/typos/hadolint/shellcheck
 #                for .devcontainer/ use; built only with --target dev
 
-ARG UV_VERSION=0.11.8
+ARG UV_VERSION=0.13.1
 ARG JUST_VERSION=1.59.0
-ARG PYTHON_IMAGE=python:3.13-slim-bookworm
+ARG PYTHON_IMAGE=python:3.13.16-slim-bookworm@sha256:a1165e272e578941b84abc79e4ab38a0305cd12803a5c4247979ac7655f4d641
 
 # ===== Stage 1: pinned uv binary =====
-FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv
+FROM ghcr.io/astral-sh/uv:${UV_VERSION}@sha256:4a1f3666816dafadd20ceb71eac9a7d56d7ef30279f7d64048519ab901ada336 AS uv
 
 # ===== Stage 2: pinned just binary =====
-FROM debian:bookworm-slim AS just
+FROM debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 AS just
 ARG JUST_VERSION
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
@@ -61,12 +61,13 @@ WORKDIR /work
 # UV_PROJECT_ENVIRONMENT) which is later chowned to the runtime user.
 RUN --mount=type=cache,target=/root/.cache/uv,sharing=locked \
     --mount=type=bind,source=uv.lock,target=/work/uv.lock \
+    --mount=type=bind,source=.python-version,target=/work/.python-version \
     --mount=type=bind,source=pyproject.toml,target=/work/pyproject.toml \
     uv sync --locked --no-install-project --no-dev \
  && chown -R app:app /opt/venv
 
 # Layer 2: project files. Source is small, so a single COPY is fine.
-COPY --chown=app:app pyproject.toml uv.lock justfile ./
+COPY --chown=app:app .python-version pyproject.toml uv.lock justfile ./
 COPY --chown=app:app config/ ./config/
 COPY --chown=app:app scripts/ ./scripts/
 RUN chmod +x ./scripts/*.sh

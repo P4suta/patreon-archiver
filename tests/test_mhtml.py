@@ -127,13 +127,10 @@ class TestLatestMhtmlRobustness:
         target.write_bytes(b"y")
         assert latest_mhtml(d) == target
 
+    @pytest.mark.parametrize("disappear_at", [1, 2])
     def test_file_disappearing_between_iterdir_and_stat_is_skipped(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, disappear_at: int
     ) -> None:
-        # Simulate the race where a candidate is removed after iterdir
-        # listed it but before stat could read its mtime. Pre-fix the sort
-        # would call stat() per comparison and crash with FileNotFoundError;
-        # the cached-stat impl drops the casualty cleanly.
         d = tmp_path / "mhtml"
         d.mkdir()
         survivor = d / "survivor.mhtml"
@@ -144,11 +141,15 @@ class TestLatestMhtmlRobustness:
         import _mhtml
 
         real_stat = Path.stat
+        calls = 0
 
-        def stat_with_disappearance(self: Path, **kw: object) -> object:
+        def stat_with_disappearance(self: Path, *, follow_symlinks: bool = True) -> os.stat_result:
+            nonlocal calls
             if self == ghost:
-                raise FileNotFoundError(self)
-            return real_stat(self, **kw)  # type: ignore[arg-type]
+                calls += 1
+                if calls == disappear_at:
+                    self.unlink()
+            return real_stat(self, follow_symlinks=follow_symlinks)
 
         monkeypatch.setattr(Path, "stat", stat_with_disappearance)
         # Ghost should be filtered out, survivor returned.

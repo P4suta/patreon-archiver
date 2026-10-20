@@ -881,6 +881,7 @@ class TestDeriveDefaultsProperties:
     )
     def test_round_trip_full_metadata(
         self,
+        *,
         handle: str,
         year: int,
         month: int,

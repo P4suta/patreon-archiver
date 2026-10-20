@@ -12,18 +12,18 @@ pre-commit:
   commands:
     ruff-check:
       glob: "*.{py,pyi}"
-      run: ruff check {staged_files}
+      run: uv run --locked ruff check {staged_files}
       stage_fixed: true
 
     ruff-format:
       glob: "*.{py,pyi}"
-      run: ruff format --check {staged_files}
+      run: uv run --locked ruff format --check {staged_files}
 
     pyright:
       glob: "*.{py,pyi}"
       # Pyright wants the whole project for cross-file analysis; pass the
       # config-controlled set instead of staged files only.
-      run: pyright
+      run: uv run --locked pyright
 
     typos:
       run: typos {staged_files}
@@ -39,4 +39,4 @@ pre-commit:
 pre-push:
   commands:
     pytest:
-      run: pytest -q
+      run: uv run --locked pytest -q

@@ -7,6 +7,7 @@ tests can run in isolation.
 
 from __future__ import annotations
 
+import sys
 from datetime import date, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -629,5 +630,5 @@ class TestRunInventoryAndBatch:
         rc = sync.run_batch_download(urls)
         assert rc == 0
         argv = run_mock.call_args.args[0]
-        assert argv[0].endswith("python") or argv[0].endswith("python3")
+        assert argv[0] == sys.executable
         assert "--batch-file" in argv

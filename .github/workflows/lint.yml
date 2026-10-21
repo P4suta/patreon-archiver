@@ -55,8 +55,8 @@ jobs:
           enable-cache: true
       - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde # v5.2.1
         with:
-          version: v2026.10.11
-          sha256: f9612efcddda0ae55b62d3b6f82a6c860d5b54ebee0807d4f1a1d578055e1607
+          version: v2026.10.13
+          sha256: 94c45523c7b6760b7da704f16051171ca32e8447a849a02266a439a4455e9a12
           cache: false
       - run: mise x -- actionlint
       - run: mise x -- shellcheck -x scripts/*.sh

@@ -38,13 +38,15 @@ Rebuild it after changing its base image or bundled tools.
 
 ## Other checks
 
+The fast-check tool versions are pinned in `mise.toml`.
+
 ```sh
-actionlint
-shellcheck -x scripts/*.sh
-hadolint --config .hadolint.yaml --failure-threshold error Dockerfile
+mise x -- actionlint
+mise x -- shellcheck -x scripts/*.sh
+mise x -- hadolint --config .hadolint.yaml --failure-threshold error Dockerfile
 uvx --from yamllint==1.38.0 yamllint --config-file .yamllint.yaml --strict .
-typos
-gitleaks detect --source . --redact --no-git
+mise x -- typos
+mise x -- gitleaks detect --source . --redact --no-git
 ```
 
 CI pins these tools and selects Python, runtime-image, and security checks from affected paths.

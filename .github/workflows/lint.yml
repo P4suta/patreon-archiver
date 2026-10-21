@@ -53,15 +53,17 @@ jobs:
           version: "0.13.1"
           python-version: "3.13.16"
           enable-cache: true
-      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
+      - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde # v5.2.1
         with:
-          tool: actionlint@1.7.12,shellcheck@0.11.0,hadolint@2.15.1,typos-cli@1.51.1,gitleaks@8.30.1
-      - run: actionlint
-      - run: shellcheck -x scripts/*.sh
-      - run: hadolint --config .hadolint.yaml --failure-threshold error Dockerfile
+          version: v2026.10.11
+          sha256: f9612efcddda0ae55b62d3b6f82a6c860d5b54ebee0807d4f1a1d578055e1607
+          cache: false
+      - run: mise x -- actionlint
+      - run: mise x -- shellcheck -x scripts/*.sh
+      - run: mise x -- hadolint --config .hadolint.yaml --failure-threshold error Dockerfile
       - run: uvx --from yamllint==1.38.0 yamllint --config-file .yamllint.yaml --strict .
-      - run: typos
-      - run: gitleaks detect --source . --redact --no-git
+      - run: mise x -- typos
+      - run: mise x -- gitleaks detect --source . --redact --no-git
 
   python:
     name: Python types, tests, and coverage

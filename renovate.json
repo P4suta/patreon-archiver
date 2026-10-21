@@ -1,49 +1,35 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended",
-    ":semanticCommits",
-    ":pinAllExceptPeerDependencies",
-    ":automergeMinor",
-    ":automergeDigest",
-    ":dependencyDashboard",
-    "schedule:earlyMondays",
-    "helpers:pinGitHubActionDigests"
+    "github>P4suta/renovate-config"
   ],
-  "timezone": "Asia/Tokyo",
   "labels": ["dependencies"],
-  "rangeStrategy": "bump",
-  "lockFileMaintenance": {
-    "enabled": true,
-    "schedule": ["before 6am on monday"]
-  },
   "packageRules": [
     {
-      "matchManagers": ["pep621"],
-      "matchUpdateTypes": ["patch", "minor"],
-      "groupName": "python deps (non-major)"
-    },
-    {
-      "matchDepTypes": ["dev"],
-      "matchUpdateTypes": ["patch", "minor"],
-      "automerge": true,
-      "groupName": "python dev tooling"
-    },
-    {
-      "matchManagers": ["github-actions"],
-      "matchUpdateTypes": ["patch", "minor", "digest"],
-      "automerge": true,
-      "groupName": "github actions"
-    },
-    {
       "matchManagers": ["dockerfile"],
-      "matchUpdateTypes": ["patch", "minor", "digest"],
       "automerge": false,
-      "groupName": "dockerfile base + ARG pins"
+      "groupName": "container images"
+    },
+    {
+      "matchManagers": ["pep621"],
+      "matchDepTypes": ["requires-python"],
+      "rangeStrategy": "widen"
+    },
+    {
+      "matchPackageNames": ["python"],
+      "allowedVersions": "/^3\\.13(?:[.-]|$)/",
+      "automerge": false,
+      "groupName": "Python 3.13 runtime"
+    },
+    {
+      "matchPackageNames": ["uv", "astral-sh/uv", "ghcr.io/astral-sh/uv"],
+      "automerge": false,
+      "groupName": "uv"
     },
     {
       "matchPackageNames": ["yt-dlp"],
       "automerge": false,
+      "groupName": "yt-dlp",
       "labels": ["dependencies", "yt-dlp"],
       "description": "yt-dlp moves fast and breaks extractors; review every bump."
     }

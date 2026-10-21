@@ -30,7 +30,7 @@ The whole module is auto-skipped when:
 * ``patreon-archiver:local`` is not built yet.
 
 So a fresh clone can run ``uv run pytest`` and just see ``s``-skips
-until ``pa.cmd build`` produces the image; once it's there the same
+until ``docker compose build pa`` produces the image; once it's there the same
 ``pytest`` invocation starts running these checks alongside the unit
 tests.
 """
@@ -100,7 +100,7 @@ def _docker_available() -> tuple[bool, str]:
     except (subprocess.TimeoutExpired, OSError) as exc:
         return False, f"image inspect failed: {exc}"
     if img.returncode != 0:
-        return False, f"image {IMAGE_TAG} not built (run `pa.cmd build`)"
+        return False, f"image {IMAGE_TAG} not built (run `docker compose build pa`)"
     return True, ""
 
 
@@ -130,6 +130,8 @@ def _run_pa(data_dir: Path, *args: str, timeout: int = 60) -> subprocess.Complet
             docker,
             "run",
             "--rm",
+            "--network",
+            "none",
             "-v",
             f"{bind_src}:/data",
             "-e",

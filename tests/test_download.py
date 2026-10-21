@@ -177,9 +177,10 @@ class TestBuildYtDlpArgs:
     def test_config_path_override_via_env(
         self, bare_staging: publish.StagingRun, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv(CONFIG_PATH_ENV, "/work/config/yt-dlp-fast.conf")
+        config_path = bare_staging.home / "yt-dlp-fast.conf"
+        monkeypatch.setenv(CONFIG_PATH_ENV, str(config_path))
         args = build_yt_dlp_args(UrlBlock(url="https://x"), [], None, bare_staging)
-        assert args[1] == "/work/config/yt-dlp-fast.conf"
+        assert args[1] == str(config_path)
 
     def test_empty_env_falls_back_to_default(
         self, bare_staging: publish.StagingRun, monkeypatch: pytest.MonkeyPatch
@@ -881,6 +882,7 @@ class TestDeriveDefaultsProperties:
     )
     def test_round_trip_full_metadata(
         self,
+        *,
         handle: str,
         year: int,
         month: int,

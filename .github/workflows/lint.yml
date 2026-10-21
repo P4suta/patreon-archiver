@@ -1,11 +1,16 @@
-name: lint-and-test
+name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
+  merge_group:
   workflow_dispatch:
+    inputs:
+      suite:
+        description: Verification suite
+        type: choice
+        default: all
+        options: [all, security]
 
 permissions:
   contents: read
@@ -15,101 +20,168 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  python:
-    name: ruff + pyright + pytest (cov 100%)
+  quality:
+    name: Workflow and source checks
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      python: ${{ steps.changes.outputs.python }}
+      image: ${{ steps.changes.outputs.image }}
+      security: ${{ steps.changes.outputs.security }}
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: changes
+        with:
+          base: ${{ github.event.merge_group.base_sha || github.event.repository.default_branch }}
+          filters: .github/filters/ci.yml
+      - name: Validate selection outputs
+        env:
+          PYTHON_FILTER: ${{ steps.changes.outputs.python }}
+          IMAGE_FILTER: ${{ steps.changes.outputs.image }}
+          SECURITY_FILTER: ${{ steps.changes.outputs.security }}
+        run: >-
+          jq -en --arg py "$PYTHON_FILTER" --arg image "$IMAGE_FILTER" --arg security "$SECURITY_FILTER"
+          '[$py, $image, $security] | all(. == "true" or . == "false")'
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.13.1"
+          python-version: "3.13.16"
           enable-cache: true
+      - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde # v5.2.1
+        with:
+          version: v2026.10.13
+          sha256: 94c45523c7b6760b7da704f16051171ca32e8447a849a02266a439a4455e9a12
+          cache: false
+      - run: mise x -- actionlint
+      - run: mise x -- shellcheck -x scripts/*.sh
+      - run: mise x -- hadolint --config .hadolint.yaml --failure-threshold error Dockerfile
+      - run: uvx --from yamllint==1.38.0 yamllint --config-file .yamllint.yaml --strict .
+      - run: mise x -- typos
+      - run: mise x -- gitleaks detect --source . --redact --no-git
 
-      - name: Sync dev deps
-        run: uv sync --group dev --frozen
-
-      - name: ruff check
-        run: uv run ruff check
-
-      - name: ruff format check
-        run: uv run ruff format --check
-
-      - name: pyright (strict)
-        run: uv run pyright
-
-      - name: pytest with branch coverage
-        run: uv run pytest --cov-report=xml
-
+  python:
+    name: Python types, tests, and coverage
+    needs: [quality]
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.suite == 'all') ||
+      (github.event_name != 'workflow_dispatch' && needs.quality.outputs.python == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.13.1"
+          python-version: "3.13.16"
+          enable-cache: true
+      - run: uv sync --group dev --locked
+      - run: uv run --locked ruff check
+      - run: uv run --locked ruff format --check
+      - run: uv run --locked pyright
+      - run: uv run --locked pytest --cov-report=xml
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-xml
           path: coverage.xml
+          retention-days: 7
 
-  shell:
-    name: shellcheck
+  image:
+    name: Runtime image smoke
+    needs: [quality]
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.suite == 'all') ||
+      (github.event_name != 'workflow_dispatch' && needs.quality.outputs.image == 'true')
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - name: shellcheck smoke
-        run: |
-          docker run --rm -v "$PWD":/mnt -w /mnt koalaman/shellcheck:v0.11.0 \
-            -x scripts/smoke.sh
-
-  dockerfile:
-    name: hadolint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: hadolint/hadolint-action@v3.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          dockerfile: Dockerfile
-          config: .hadolint.yaml
-          failure-threshold: error
-
-  yaml:
-    name: yamllint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: yamllint
-        run: |
-          docker run --rm -v "$PWD":/data cytopia/yamllint:1 \
-            -c /data/.yamllint.yaml --strict /data
-
-  typos:
-    name: typos
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: crate-ci/typos@v1.31.0
-
-  gitleaks:
-    name: gitleaks
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          fetch-depth: 0
-      - run: |
-          docker run --rm -v "$PWD":/repo zricethezav/gitleaks:v8.30.1 \
-            detect --source=/repo --redact --no-git
+          context: .
+          target: runtime
+          load: true
+          push: false
+          tags: patreon-archiver:local
+          cache-from: type=gha,scope=patreon-runtime
+          cache-to: type=gha,mode=min,scope=patreon-runtime
+      - name: Verify the runtime without network access
+        run: >-
+          docker run --rm --network none
+          --tmpfs /data:rw,uid=10001,gid=10001,mode=0770
+          patreon-archiver:local smoke
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.13.1"
+          python-version: "3.13.16"
+          enable-cache: true
+      - run: uv sync --group dev --locked
+      - run: uv run --locked pytest --no-cov tests/test_integration.py
 
-  # The one status check branch protection requires,
-  # named the same in every P4suta repository.
-  # It passes only when every job it needs succeeded or was skipped.
+  security:
+    name: Security analysis (${{ matrix.language }})
+    needs: [quality]
+    if: needs.quality.outputs.security == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [python, actions]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+      - uses: github/codeql-action/analyze@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          category: /language:${{ matrix.language }}
+
   required:
     name: required
     if: always()
-    needs: [python, shell, dockerfile, yaml, typos, gitleaks]
+    needs: [quality, python, image, security]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions: {}
     steps:
-      - name: Fail unless every needed job succeeded or was skipped
+      - name: Verify every selected result
         env:
-          RESULTS: ${{ toJSON(needs.*.result) }}
+          RESULTS: ${{ toJSON(needs) }}
+          PYTHON_SELECTED: ${{ needs.quality.outputs.python }}
+          IMAGE_SELECTED: ${{ needs.quality.outputs.image }}
+          SECURITY_SELECTED: ${{ needs.quality.outputs.security }}
+          EVENT_NAME: ${{ github.event_name }}
+          MANUAL_SUITE: ${{ inputs.suite }}
         run: |
-          echo "${RESULTS}"
-          jq -e 'all(.[]; IN("success", "skipped"))' <<< "${RESULTS}"
+          set -euo pipefail
+          jq -e --arg py "$PYTHON_SELECTED" --arg image "$IMAGE_SELECTED" \
+            --arg security "$SECURITY_SELECTED" --arg event "$EVENT_NAME" --arg suite "$MANUAL_SUITE" '
+            ([$py, $image, $security] | all(. == "true" or . == "false")) and
+            ($event != "workflow_dispatch" or $suite == "all" or $suite == "security") and
+            .quality.result == "success" and
+            (.python.result == (if ($event == "workflow_dispatch" and $suite == "all") or
+              ($event != "workflow_dispatch" and $py == "true") then "success" else "skipped" end)) and
+            (.image.result == (if ($event == "workflow_dispatch" and $suite == "all") or
+              ($event != "workflow_dispatch" and $image == "true") then "success" else "skipped" end)) and
+            (.security.result == (if $security == "true" or $event == "workflow_dispatch"
+              then "success" else "skipped" end))
+            ' <<< "$RESULTS"

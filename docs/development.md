@@ -1,8 +1,8 @@
 # Development
 
-The runtime and CI use Python 3.13.16 and uv 0.13.1.
-The minimum supported Python version remains 3.13.
-The exact dependency graph is recorded in `uv.lock`.
+The runtime and CI use Python 3.13.16 and uv 0.13.5.
+The supported Python range starts at 3.13.
+`uv.lock` records the exact dependency graph.
 
 ## Python checks
 
@@ -31,14 +31,14 @@ uv run --locked pytest
 
 Container integration tests skip when Docker or the local image is unavailable.
 They use isolated temporary data directories.
-A unit-test run with those skips does not establish container integration coverage.
+A unit-test run with those skips doesn't establish container integration coverage.
 
 The optional devcontainer uses the Dockerfile's `dev` target.
 Rebuild it after changing its base image or bundled tools.
 
 ## Other checks
 
-The fast-check tool versions are pinned in `mise.toml`.
+`mise.toml` pins the fast-check tool versions.
 
 ```sh
 mise x -- actionlint
@@ -50,7 +50,7 @@ mise x -- gitleaks detect --source . --redact --no-git
 ```
 
 CI pins these tools and selects Python, runtime-image, and security checks from affected paths.
-Runtime-image jobs also run the eleven container integration cases with networking disabled.
+Runtime-image jobs also run the eleven container integration cases without network access.
 The separate Python job enforces full line and branch coverage.
 Fast workflow, shell, container-file, spelling, and secret checks run on every pull request.
 The `required` job rejects selected failures and unexpected skips.
@@ -61,12 +61,12 @@ See the [verification decision](adr/verification-contracts.md).
 
 Renovate inherits the shared dependency preset.
 Python runtime updates stay within 3.13, while package metadata retains its compatibility floor.
-Keep the Docker runtime, `.python-version`, and CI SDK pins aligned.
+Keep Python version pins aligned in the Docker runtime, `.python-version`, and CI.
 Update uv in both CI and the Dockerfile.
 
 Review yt-dlp updates explicitly.
 Update its project pin and lockfile together, run all checks, rebuild the runtime image, and run the offline smoke and integration tests.
-Offline tests do not prove compatibility with a live publisher or a user's credentials.
+Offline tests don't prove compatibility with a live publisher or a user's credentials.
 
 Pull requests build a local test image without registry credentials.
 Container publication remains a separate workflow for version tags and manual requests.

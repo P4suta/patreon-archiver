@@ -8,12 +8,12 @@
 #   4. dev     — runtime + ruff/pyright/pytest/lefthook/typos/hadolint/shellcheck
 #                for .devcontainer/ use; built only with --target dev
 
-ARG UV_VERSION=0.13.1
+ARG UV_VERSION=0.13.5
 ARG JUST_VERSION=1.59.0
 ARG PYTHON_IMAGE=python:3.13.16-slim-bookworm@sha256:a1165e272e578941b84abc79e4ab38a0305cd12803a5c4247979ac7655f4d641
 
 # ===== Stage 1: pinned uv binary =====
-FROM ghcr.io/astral-sh/uv:${UV_VERSION}@sha256:4a1f3666816dafadd20ceb71eac9a7d56d7ef30279f7d64048519ab901ada336 AS uv
+FROM ghcr.io/astral-sh/uv:${UV_VERSION}@sha256:32a7bb39b496babbd997b0a39a4d66c126bdaf5661b302bf6f06abda8deca6ff AS uv
 
 # ===== Stage 2: pinned just binary =====
 FROM debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 AS just

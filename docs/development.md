@@ -1,6 +1,8 @@
 # Development
 
-The runtime and CI use Python 3.13.16 and uv 0.13.5.
+The runtime image pins Python and uv in `Dockerfile`.
+CI reads the Python version from `.python-version`.
+Workflow steps pin uv alongside each action.
 The supported Python range starts at 3.13.
 `uv.lock` records the exact dependency graph.
 

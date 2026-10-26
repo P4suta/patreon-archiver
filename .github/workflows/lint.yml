@@ -25,12 +25,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: read
-      pull-requests: read
+      contents: read # Check out the source.
+      pull-requests: read # Read changed paths to select checks.
     outputs:
       python: ${{ steps.changes.outputs.python }}
       image: ${{ steps.changes.outputs.image }}
       security: ${{ steps.changes.outputs.security }}
+      python-version: ${{ steps.python.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -51,8 +52,15 @@ jobs:
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           version: "0.13.5"
-          python-version: "3.13.16"
           enable-cache: true
+      - name: Read the Python pin
+        id: python
+        run: |
+          set -euo pipefail
+          version=$(uv python pin)
+          [[ "$version" =~ ^3\.13\.[0-9]+$ ]]
+          printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
+          printf 'UV_PYTHON=%s\n' "$version" >> "$GITHUB_ENV"
       - uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550 # v5.2.2
         with:
           version: v2026.10.17
@@ -80,7 +88,7 @@ jobs:
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           version: "0.13.5"
-          python-version: "3.13.16"
+          python-version: ${{ needs.quality.outputs.python-version }}
           enable-cache: true
       - run: uv sync --group dev --locked
       - run: uv run --locked ruff check
@@ -125,7 +133,7 @@ jobs:
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           version: "0.13.5"
-          python-version: "3.13.16"
+          python-version: ${{ needs.quality.outputs.python-version }}
           enable-cache: true
       - run: uv sync --group dev --locked
       - run: uv run --locked pytest --no-cov tests/test_integration.py
@@ -137,8 +145,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      contents: read
-      security-events: write
+      contents: read # Check out the source.
+      security-events: write # Upload CodeQL results.
     strategy:
       fail-fast: false
       matrix:

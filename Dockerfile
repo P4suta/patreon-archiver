@@ -10,7 +10,7 @@
 
 ARG UV_VERSION=0.13.5
 ARG JUST_VERSION=1.59.0
-ARG PYTHON_IMAGE=python:3.13.16-slim-bookworm@sha256:a1165e272e578941b84abc79e4ab38a0305cd12803a5c4247979ac7655f4d641
+ARG PYTHON_IMAGE=python:3.13.17-slim-bookworm@sha256:e32be0e55814a08977501ca863271d9bd02443710db8f2afaf8372e2c4508530
 
 # ===== Stage 1: pinned uv binary =====
 FROM ghcr.io/astral-sh/uv:${UV_VERSION}@sha256:32a7bb39b496babbd997b0a39a4d66c126bdaf5661b302bf6f06abda8deca6ff AS uv

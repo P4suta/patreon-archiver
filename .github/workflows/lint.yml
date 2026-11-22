@@ -51,7 +51,7 @@ jobs:
           '[$py, $image, $security] | all(. == "true" or . == "false")'
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
-          version: "0.13.5"
+          version: "0.13.9"
           enable-cache: true
       - name: Read the Python pin
         id: python
@@ -87,7 +87,7 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
-          version: "0.13.5"
+          version: "0.13.9"
           python-version: ${{ needs.quality.outputs.python-version }}
           enable-cache: true
       - run: uv sync --group dev --locked
@@ -132,7 +132,7 @@ jobs:
           patreon-archiver:local smoke
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
-          version: "0.13.5"
+          version: "0.13.9"
           python-version: ${{ needs.quality.outputs.python-version }}
           enable-cache: true
       - run: uv sync --group dev --locked
